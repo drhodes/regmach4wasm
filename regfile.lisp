@@ -22,8 +22,9 @@
   (aref (regfile-regs-int-32 rf) reg))
 
 (defun expected (exp got)
-  (when (not (eq exp got))
-    (error (format nil "test error: expecting ~a, got: ~a" exp got))))
+  (if (eq exp got)
+      'PASS
+      (error (format nil "test error: expecting ~a, got: ~a" exp got))))
 
 (defun test-with-regfile (test-func)
   (apply test-func (list (make-regfile))))
