@@ -9,6 +9,17 @@
 (defstruct instruction pattern layout opcode description microcode)
 (defvar *instructions* (make-symbol-table))
 
+(defun add-instruction (pattern layout opcode description microcode)
+  "add-instruction does some stuff TODO"
+  (symbol-table-put *instructions*
+                    (car pattern)
+                    (make-instruction :pattern pattern
+                                      :layout layout
+                                      :opcode opcode
+                                      :description description
+                                      :microcode microcode)))
+
+
 (add-instruction '(ADD RA RB RC)
                  'OP
                  #*100000
@@ -30,16 +41,31 @@
                  '((inc-pc)
                    (set-reg rc (+ (reg ra) (sign-extend lit)))))
 
-(defun add-instruction (pattern layout opcode description microcode)
-  "add-instruction does some stuff TODO"
-  (symbol-table-put *instructions*
-                    (car pattern)
-                    (make-instruction :pattern pattern
-                                      :layout layout
-                                      :opcode opcode
-                                      :description description
-                                      :microcode microcode)))
+(instruction-lookup 'ADD)
 
+
+(defun instruction-lookup (opcode)
+  (let ((mc-prog (symbol-table-get *instructions* opcode)))
+    (if mc-prog mc-prog
+        (error (format nil "Failed to locate opcode in *instruction* table: ~a" opcode)))))
+
+(defun reg-from-inst (mcvm inst)
+  "Remember there are two types of instructions OP and OPC."
+  (cond
+    ((jmp? inst) (jmp-ra inst))
+    
+    )
+  ;; (ADD ra rb rc)
+  ;; (ADDC ra lit rc)
+  )
+
+(defun instruction? (xs)
+  (and (listp xs)
+       (> (length xs) 0)
+       (symbolp (car xs))
+       (not (eq nil (symbol-table-get *instructions* (car xs))))))
+
+(instruction? '(ADD r1 r2 r3))
 
 
 

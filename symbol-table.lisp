@@ -8,11 +8,11 @@
   (setf (gethash sym (symbol-table-store symtab)) val))
 
 (defun symbol-table-get (symtab sym) 
-  (check-type symtab hash-table)
-  (check-type sym symbol) 
-  (aref (symbol-table-store symtab) reg))
+  (check-type symtab symbol-table)
+  (check-type sym symbol)
+  (gethash sym (symbol-table-store symtab)))
 
-(progn
-  (let ((symtab (make-symbol-table)))
-    (symbol-table-put symtab 'hello 42)
-    symtab))
+;; (progn
+;;   (let ((symtab (make-symbol-table)))
+;;     (symbol-table-put symtab 'hello 42)
+;;     symtab))
