@@ -168,4 +168,10 @@
    (expected 3 (mcvm-get-reg vm 2))
    (expected 4 (mcvm-pc vm))))
 
+;; (eval-mc-prog-with
+;;  '((set-reg r0 1)
+;;    (set-reg r1 2)
+;;    (beq r0 :here r2))
+;;  (lambda (vm)))
+
 
