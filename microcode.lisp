@@ -77,11 +77,6 @@
       (cons (list (car xs) (car ys))
             (zip (cdr xs) (cdr ys)))))
 
-(defun bind-vars (env expr)
-  (cond ((listp expr) (mapcar (lambda (x) (bind-vars env x)) expr))
-        ((symbolp expr) (let ((replacement (symbol-table-get env expr)))
-                          (if replacement replacement expr)))
-        (t expr)))
 
 (defun eval-instruction (vm env expr)
   ;; expr is an instruction in this form (ADD r1 r2 r3)
@@ -130,7 +125,6 @@
         ((register-p expr) (reg-to-num expr))
         (t (error (format nil "unhandled case in eval-mc: ~a" expr)))))
 
-
 (defun eval-mc-prog (vm prog)
   (progn (mapcar (lambda (stmt) (eval-mc vm (make-symbol-table) stmt)) prog)
          vm))
@@ -167,11 +161,5 @@
  (lambda (vm)
    (expected 3 (mcvm-get-reg vm 2))
    (expected 4 (mcvm-pc vm))))
-
-;; (eval-mc-prog-with
-;;  '((set-reg r0 1)
-;;    (set-reg r1 2)
-;;    (beq r0 :here r2))
-;;  (lambda (vm)))
 
 

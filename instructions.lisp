@@ -82,8 +82,6 @@
                    (if (eq temp 0) (set pc ea))))
 
 
-
-
 ;;(instruction-lookup 'ADD)
 
 (defun instruction-lookup (opcode)

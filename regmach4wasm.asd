@@ -6,13 +6,16 @@
   :license  "MIT"
   :version "0.0.1"
   :serial t
+  :depends-on ("fiasco")
+  
   :components ((:file "package")
-               (:file "regmach4wasm")
                (:file "symbol-table")
-               (:file "assembler")
+               (:file "env")
+               (:file "util")
                (:file "regfile")
+               (:file "instructions")
                (:file "microcode")
-
-               
-               ))
+               (:file "beta.lisp") ;; this contains macrodefs for beta.uasm
+               (:file "assembler") 
+              ))
 

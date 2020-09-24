@@ -1,0 +1,38 @@
+* assembler and VM for the BETA CPU
+<2020-09-23 Wed>
+
+The goal is to get tinyOS running on this, running a webserver that is
+keeping track of the VM state,
+
+Maybe there is a display. 
+
+** Stages.
+
+*** first stage defines the macros
+    
+*** second stage <2020-09-23 Wed>
+expand the macros until they are all expanded.
+if there are any callable forms left, then a macro was not defined.
+
+- TODO all macro definitions need to go into the multiargument vector
+  also, make a cleaner/std interface for storing/getting macros from the
+  environment.
+
+- TODO consider assignments inside macros .. they should be local to
+  the macro, or not be allowed at all.
+
+
+*** stage three 
+**** Next byte to be assembled
+this is tracked in the environment for now. 
+lisp has dibs on the dot (.) char, so use ($) instead.
+
+uasm uses . = 24
+this will use (= $ 24)
+
+**** Labels
+
+
+
+
+

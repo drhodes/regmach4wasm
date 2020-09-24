@@ -1,9 +1,13 @@
 # regmach4wasm
-### _Your Name <your.name@example.com>_
+### _Derek A. Rhodes <physci@gmail.com>_
 
-This is a beta assembly language interpreter.
+This is an experiment for building an interpreter beta assembly
+language interpreter.
 
-## License
+## License MIT
 
-Specify license here
+The big idea is interpreters inside interpreters. Constrained stories
+within stories.
+
+
 
