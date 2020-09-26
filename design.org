@@ -33,6 +33,81 @@ this will use (= $ 24)
 **** Labels
 
 
+*** Design mistake 1. <2020-09-26 Sat 08:04>
+I waited until all the macros were expanded before figuring out when to
+increment the cur-byte-location assembler. 
+
+Clarify.
+
+The cur-byte-location symbol $ is not replaced until the end because
+the users can set it will assignment, like 
+
+(set $ 123)
+
+another thing:
+
+$ $ $ $ $ will assemble to the byte sequence 0 1 2 3 4.
+
+Here is the problem. 
+
+(set $ 0)
+(ADD $ $ $)
+...
+
+shoud expand to 4 bytes
+
+byte 0: 00
+byte 1: 00
+byte 2: 00
+byte 3: 80
+
+because the assembler should evaluate $ as 0 for all $ in the macro
+expansion. However, currently, since the macro is expanded into bytes
+and since all the $s are calculated at the end, then there is no way
+for the assembler to know that the bytes originating from the same
+macro are associated with the same $.
+
+The problem manifests effectively as
+
+(set $ 0)
+(ADD $ $ $) should be interpreted as
+(ADD 0 0 0)
+
+Currently, it is interpreted erroneously as
+
+(set $ = 0)
+(ADD 0 1 2)
+
+modulo any reordering.
+
+----
+**** A solution <2020-09-26 Sat 09:35>
+
+After the macro declaration pass, surround the top-level macrocalls
+(set $ = 0)
+(pause-incrementing-$)
+(ADD 0 1 2)
+(unpause-incrementing-$)
+
+One more level of subtlety. pause-incrementing doesn't mean that the
+assembler should stop keeping track of which byte location is
+currently being assembled at, only that when (current-byte-location)
+is called, that it returns the current-byte-location when
+pause-incrementing-$ was encountered.
+
+Therefore, more state is needed.
+
+paused-byte-location
+current-byte-location
 
 
+***** An Aside
+Maybe using a set of lisp macros to implement the ISA would be better.
+
+
+*** Bug <2020-09-26 Sat 13:01>
+(set $ 42)
+
+not only must this set the cur-byte-location to 42, but it needs to
+fill from cur-location up to and including location 41 with zeros.
 
