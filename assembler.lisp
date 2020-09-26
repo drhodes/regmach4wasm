@@ -47,6 +47,8 @@
   (let ((addr (cur-byte-addr env)))
     (env-put env 'cur-byte-addr (+ addr n))))
 
+
+;; need figure out how bsim handles these differences.
 (defun asm-eval-number (env expr)
   (check-type expr number)
   (when (< expr -128)
@@ -54,7 +56,6 @@
                  as signed integer, ~a is too negative."  expr))
   (when (> expr 255)
     (format nil "expression results must fit within one byte, ~a is too large." expr))
-  (increment-cur-byte env 1)
   expr)
 
 (defun asm-eval-label (env expr)
@@ -73,8 +74,6 @@
           (progn
             (increment-cur-byte env 1)
             (cons 0 (asm-eval-align env expr))))))
-
-
 
 (defun asm-eval-op (env op expr)
   (apply op (mapcar (lambda (x) (asm-eval env x))
@@ -116,7 +115,6 @@
 
 (defun $? (expr) (eq expr '$))
 
-
 (defun asm-eval (env expr)
   (format t "asm ~a: ~a~%" (cur-byte-addr env) expr)
   (cond
@@ -132,7 +130,6 @@
                     (<< (asm-eval-left-shift env expr))                    
                     (% (asm-eval-mod env expr))))
     (t (error (format nil "unhandled expr: ~a" expr)))))
-
 
 (defun set-cur-byte-addr (env n)
   (env-put env 'cur-byte-addr n))
@@ -187,8 +184,11 @@
     (let* ((result1 (loop for expr in program
                           collect (asm-eval-pass1 root-env expr)))           
            (result2 (repeat-expand-macro root-env result1))
-           (result3 (affix-locations root-env result2)))           
-      (list root-env result3))))
+           (result3 (affix-locations root-env result2)))
+      (set-cur-byte-addr root-env 0)
+      (mapcar (lambda (x) (asm-eval root-env x)) (replace-symbols root-env result3))
+      ;;result3
+      )))
 
 (defun set? (item)
   (and (listp item)
@@ -200,11 +200,13 @@
         (val (caddr item)))
     (env-put env sym (asm-eval env val))))
 
+;; need to do a bunch of math tests!
+
 (defun affix-locations (env prog)
   (if (null prog) (list)
       (let ((item (car prog)))
         (cond
-          ((label? item) ;; labels are labels and labels are for humans
+          ((label? item) ;; track where the labels are
            (env-put env item (cur-byte-addr env))
            (affix-locations env (cdr prog)))
 
@@ -220,58 +222,46 @@
            (affix-locations env (cdr prog)))
           
           ;; otherwise
-          (t (let ((result (asm-eval env item)))
-               (increment-cur-byte env 1)
-               (cons result (affix-locations env (cdr prog)))))))))
+          (t (increment-cur-byte env 1)
+             (cons item (affix-locations env (cdr prog))))))))
 
 ;;(test2)
 
-
-
-
-(defun test2 ()
-  (assemble
-      '((set r0 0)
-        (set r1 1)
-        (set r2 2)
-        (set A 42)
-        1 2
-        (.align 4)
-        $ 5
-        (defmacro short (x) (% x #x100) (% (>> x 8) #x100)) 
-        (defmacro long (x) (short x) (short (>> x 16)))
-        :start
-        (+ A A)
-        (long 123))))
+(defun replace-symbols (env prog)
+  ;; pre-condition: env[cur-byte] should be 0 when calling this function for the
+  ;; first time.
+  (if (null prog) (list)
+      (let ((item (car prog)))
+        (cond          
+          ((label? item) (error "all labels should have been dropped by now"))
+          ((align? item) (error "all .align directives have have been dropped"))          
+          ((set? item) (error "all assignment should have been assigned already"))
+          ((comment? item) (error "all comments should have dropped in the last pass"))
+          
+          ;; otherwise
+          (t (env-put env '$ (cur-byte-addr env))
+             (increment-cur-byte env 1)
+             (cons (bind-vars env item)
+                   (replace-symbols env (cdr prog))))))))
 
 (defun test-assemble-code (code exp)
-  (unless (equal exp (cadr (assemble code)))
-    (expected exp (cadr (assemble code)))))
+  (unless (equal exp (assemble code))
+    (expected exp (assemble code))))
 
-
+;;these tests for later
 (progn
   (test-assemble-code '($ $ $ $) '(0 1 2 3))
   (test-assemble-code '($ $ $) '(0 1 2))
-  (test-assemble-code '(1 (.align 5) 2)
-                      '(1 0 0 0 0 2))
-  (test-assemble-code '(1 (.align) 2)
-                      '(1 0 0 0 2))
+  (test-assemble-code '(1 (.align 5) 2) '(1 0 0 0 0 2))
+  (test-assemble-code '(1 (.align) 2) '(1 0 0 0 2))
   )
-
 
 (defun test-assemble-beta (code exp)
   ;; "link" in the beta
   (test-assemble-code (append beta.uasm code) exp)
-  ;;(append beta.uasm code) 
   )
 
-(defun hex (u32)
-  
-  (string 'asdf))
-
-
-
-
+;; these tests for later
 (progn
   (test-assemble-beta '((add r1 2 3))
                       (list #x00 #x10 #x61 #x80))
@@ -279,34 +269,98 @@
                       (list #x00 #x10 #x01 #x80))
   (test-assemble-beta '(0 :start (add r1 r2 :start))
                       (list 0 0 0 0 #x00 #x10 #x21 #x80))
-  (test-assemble-beta '(:start (BEQ 1 :loop) :loop)
-                      (list #x00 #x00 #xe1 #x73))
+  (test-assemble-beta '((BEQ 1 2)) (list #xff #xff #xe1 #x73))
+  
+  ;; fails (test-assemble-beta '((BEQ 1 :loop) :loop) (list #x00 #x00 #xe1 #x73))
+  ;; fails (test-assemble-beta '((betabr 1 2 3 4)) '(list #x00 #x00 #x62 #x04))
+
+  ;;  failts (test-assemble-beta '((betabr 1 2 3 4)) '(#x00 #x00 #x62 #x04))
+  (test-assemble-beta '((betabr 0 0 0 0)) '(#xff #xff #x00 #x00))
+  (test-assemble-beta '((betabr 0 0 0 4)) '(#x00 #x00 #x00 #x00)) ;; fails
+  (test-assemble-beta '((betabr 0 0 4 0)) '(#xFF #xFF #x80 #x00))
+  (test-assemble-beta '((betabr 0 4 0 0)) '(#xFF #xFF #x04 #x00))
+  (test-assemble-beta '((betabr 4 0 0 0)) '(#xFF #xFF #x00 #x10))
+  (test-assemble-beta '((% (+ (<< 0 26) (<< (% 0 32) 21)
+                            (<< (% 0 32) 16)
+                            (% (- (>> (- 4 $) 2) 1) 65536))
+                         256))
+                      '(0))
+  
+  ;; The problem is that the macro is being expanded into 4
+  ;; bytes. Each byte must use the same cur-byte-loc ($), because
+  ;; those are the semantics. 
+  
+  (test-assemble-beta '((% (+ (<< 0 26) (<< (% 0 32) 21)
+                            (<< (% 0 32) 16)
+                            (% (- (>> (- 4 0) 2) 1) 65536))
+                         256))
+                      '(0))
+
+  (test-assemble-beta '((% (>> (+ (<< 0 26) (<< (% 0 32) 21)
+                                (<< (% 0 32) 16) (% (- (>> (- 4 $) 2) 1) 65536))
+                            8)
+                         256))
+                      '(0))
+  
+  (test-assemble-beta '((% (>> (+ (<< 0 26) (<< (% 0 32) 21)
+                                (<< (% 0 32) 16)
+                                (% (- (>> (- 4 $) 2) 1) 65536))
+                            16)
+                         256))
+                      '(0))
+  
+  (test-assemble-beta '((% (>> (>> (+ (<< 0 26) (<< (% 0 32) 21) (<< (% 0 32) 16)
+                                    (% (- (>> (- 4 $) 2) 1) 65536))
+                                16)
+                            8)
+                         256))
+                      '(0))
+  
+  (test-assemble-beta '($ (betabr 0 0 0 4) $) '(#x00 #x00 #x00 #x00 #xFF #xFF 0 0 8))
+  (test-assemble-beta '($ $ $ $ (betabr 0 0 0 4) $) '(#x00 #x01 #x02 #x03 #xFF #xFF 0 0 8))
+
+  (test-assemble-beta '((betaopc 0 0 0 0)) '(#x00 #x00 #x00 #x00))
+  (test-assemble-beta '((betaopc 0 0 0 4)) '(#x00 #x00 #x80 #x00))
+  (test-assemble-beta '((betaopc 0 0 4 0)) '(#x04 #x00 #x00 #x00))
+  (test-assemble-beta '((betaopc 0 4 0 0)) '(#x00 #x00 #x04 #x00))
+  (test-assemble-beta '((betaopc 4 0 0 0)) '(#x00 #x00 #x00 #x10))
+
+  (test-assemble-beta '((betaopc 4 4 4 4)) '(#x04 #x00 #x84 #x10))
+  (test-assemble-beta '((betaopc 14 14 14 14)) '(#x0E #x00 #xCE #x39))
+
+  ;;(defmacro BETABR (OP RA RC LABEL) (betaopc OP RA (- (>> (- LABEL $) 2) 1) RC))
+  ;; OP=0 RA=0 RC=0 LABEL=4
+  (test-assemble-beta '((- (>> (- 4 $) 2) 1)) '(0))
+  (test-assemble-beta '((- (>> (- 0 $) 2) 1)) '(-1))
+  ;;(test-assemble-beta '((betaopc 1 2 3 4)) '(#x03 #x00 #x82 #x04))
+  (test-assemble-beta '((>> 1 0) (>> 1 1) (>> 1 2) (>> 1 3)
+                        (<< 1 0) (<< 1 1) (<< 1 2) (<< 1 3))
+                      '(1 0 0 0 1 2 4 8))
+
   
   
-  )
+ )
 
 
 
+
+;; (break (assemble (append beta.uasm '( :start (BEQ 1 2) :loop))))
+;; (break (assemble (append beta.uasm '(0 :start (add r1 r2 :start)))))
 
 (defun test1 () (assemble beta.uasm))
 (test1)
 
-
-
-
-;; (defun assemble (program)
-;;  ;; take a list of assembly statements, return a list of bytes,
-;;  ;; instructions and stuff...
-;;  (let ((root-env (make-environment)))
-;;   (env-put root-env 'macro-namespace (make-environment))
-;;   ;; different namespace for labels?
-;;   (set-cur-byte-addr root-env 0)
-;;   (env-put root-env 'pass-number 0)
-  
-;;   ;; return the assembled list and the root environment.
-;;   (list (mapcar (lambda (stmt) (asm-eval root-env stmt))
-;;          program)
-;;      root-env)))
-
-
-
+;; (defun test2 ()
+;;   (assemble
+;;       '((set r0 0)
+;;         (set r1 1)
+;;         (set r2 2)
+;;         (set A 42)
+;;         1 2
+;;         (.align)
+;;         $ 5
+;;         (defmacro short (x) (% x #x100) (% (>> x 8) #x100)) 
+;;         (defmacro long (x) (short x) (short (>> x 16)))
+;;         :start
+;;         (+ A A)
+;;         (ADD r0 r1 r2))))

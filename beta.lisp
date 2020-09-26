@@ -87,9 +87,14 @@
     (defmacro CMPLEC (RA C RC)    (betaopc #x36 RA C RC))
     (defmacro CMPLT (RA RB RC)    (betaop #x25 RA RB RC))
     (defmacro CMPLTC (RA C RC)    (betaopc #x35 RA C RC))
-
+    
+    ;;(defmacro BETABR (OP RA RC LABEL) (betaopc OP RA (- (>> (- LABEL $) 2) 1) RC))
     (defmacro BETABR (OP RA RC LABEL) (betaopc OP RA (- (>> (- LABEL $) 2) 1) RC))
-    (defmacro BEQ (RA LABEL RC)       (BETABR #x1C RA RC LABEL))
+
+    ;; take this one out for now since the handling of macros with
+    ;; different numbered args is questionable!
+    
+    ;;(defmacro BEQ (RA LABEL RC)       (BETABR #x1C RA RC LABEL))
     (defmacro BEQ (RA LABEL)          (BETABR #x1C RA r31 LABEL))
     (defmacro BF (RA LABEL RC)        (BEQ RA LABEL RC))
     (defmacro BF (RA LABEL)           (BEQ RA LABEL))
@@ -115,8 +120,6 @@
     (defmacro POP (RA)      (LD SP -4 RA)  ( ADDC SP -4 SP))
     (defmacro CALL (label)  (BR label LP))
     ;;
-
-    
     ))
 
 
