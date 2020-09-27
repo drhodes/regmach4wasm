@@ -38,7 +38,6 @@
        (not (null expr))
        (eq (car expr) 'done)))
 
-
 (defun cur-byte-addr (env)
   (if (byte-addr-paused? env)
       (env-get env 'paused-byte-addr)
@@ -201,8 +200,21 @@
 (defun affix-assignment (env item)
   (let ((sym (cadr item))
         (val (caddr item)))
-    (env-put env sym (asm-eval env val))))
+    (if (eq sym '$)
+        (set-cur-byte-addr env val)
+        (env-put env sym (asm-eval env val)))))
 
+
+(defun match-set-current-byte? (item)
+  (and (listp item)
+       (> (length item) 2) 
+       (equal 'set (car item))
+       (equal '$ (cadr item))
+       ))
+
+(defun repeat (val n)
+  (if (eq n 0) (list)
+      (cons val (repeat val (- n 1)))))
 
 (defun affix-locations (env prog)
   (if (null prog) (list)
@@ -216,16 +228,25 @@
            (append (asm-eval-align env item)
                    (affix-locations env (cdr prog))))
           
-          ((set? item) ;; assignment 
+          ((match-set-current-byte? item)
+           ;; val here needs to be eval'd because it could be an
+           ;; arbitary expression
+           (let* ((val (asm-eval env (caddr item)))
+                  ;;asdf
+                  (diff (- val (cur-byte-addr env))))
+             (set-cur-byte-addr env val)
+             (append (repeat 0 diff) (affix-locations env (cdr prog)))))
+          
+          ((set? item) ;; assignment           
            (affix-assignment env item)
            (affix-locations env (cdr prog)))
 
           ((comment? item) ;; comment            
            (affix-locations env (cdr prog)))
 
-          ((or (pause? item) (unpause? item)) ;; keep the pause statements.
+          ((or (pause? item) (unpause? item))
+           ;; keep the pause statements without incrementing 
            (cons item (affix-locations env (cdr prog))))
-
           
           ;; otherwise
           (t (increment-cur-byte env 1)
@@ -252,6 +273,10 @@
 
 (test-assemble-temp '(1 2 3 4 5))
 (test-assemble-temp '((ADD r1 r2 r3)))
+(test-assemble-temp '((ADD $ $ $) (ADD $ $ $)))
+(test-assemble-temp '((set $ (+ $ 8)) $))
+
+
 
 (defun byte-addr-paused? (env)
   (env-get env 'cur-byte-addr-paused))
@@ -260,11 +285,12 @@
   (env-put env 'paused-byte-addr (cur-byte-addr env))
   (env-put env 'cur-byte-addr-paused t))
 
-(defun unpause$ (env) (env-put env 'cur-byte-addr-paused nil))
+(defun unpause$ (env)
+  (env-put env 'cur-byte-addr-paused nil))
 
 (defun pause? (item) (eq 'pause-incrementing-$ item))
-
 (defun unpause? (item) (eq 'unpause-incrementing-$ item))
+
 
 (defun replace-symbols (env prog)
   ;; pre-condition: env[cur-byte] should be 0 when calling this function for the
@@ -274,8 +300,11 @@
         (cond          
           ((label? item) (error "all labels should have been dropped by now"))
           ((align? item) (error "all .align directives have have been dropped"))          
-          ((set? item) (error "all assignment should have been assigned already"))
           ((comment? item) (error "all comments should have dropped in the last pass"))
+          
+          ((set? item) (if (eq '$ (cadr item))
+                           (let ((padding (caddr item)))
+                             (break padding))))
           
           ((pause? item)
            (pause$ env)
@@ -316,17 +345,17 @@
    (list 0 0 0 0 #x00 #x10 #x21 #x80))
   (test-assemble-beta '((BEQ 1 2)) (list #xff #xff #xe1 #x73))
   
-  ;; fails (test-assemble-beta '((BEQ 1 :loop) :loop) (list #x00 #x00 #xe1 #x73))
-  ;; fails (test-assemble-beta '((betabr 1 2 3 4)) '(list #x00 #x00 #x62 #x04))
+  (test-assemble-beta '((BEQ 1 :loop) :loop) (list #x00 #x00 #xe1 #x73))
+  (test-assemble-beta '((betabr 1 2 3 4)) (list #x00 #x00 #x62 #x04))
 
 
   (test-assemble-beta '((ADD $ $ $)) '(0 0 0 #x80))
   (test-assemble-beta '((+ $ $)) '(0)) 
-  (test-assemble-beta '((set $ 40) (+ $ $)) '(80))
+  (test-assemble-beta '((set $ 10) (+ $ $)) '(0 0 0 0 0 0 0 0 0 0 20))
   
-  ;; failts (test-assemble-beta '((betabr 1 2 3 4)) '(#x00 #x00 #x62 #x04))
+  (test-assemble-beta '((betabr 1 2 3 4)) '(#x00 #x00 #x62 #x04))
   (test-assemble-beta '((betabr 0 0 0 0)) '(#xff #xff #x00 #x00))
-  ;; fails (test-assemble-beta '((betabr 0 0 0 4)) '(#x00 #x00 #x00 #x00)) ;; fails
+  (test-assemble-beta '((betabr 0 0 0 4)) '(#x00 #x00 #x00 #x00))
   (test-assemble-beta '((betabr 0 0 4 0)) '(#xFF #xFF #x80 #x00))
   (test-assemble-beta '((betabr 0 4 0 0)) '(#xFF #xFF #x04 #x00))
   (test-assemble-beta '((betabr 4 0 0 0)) '(#xFF #xFF #x00 #x10))
