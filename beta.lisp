@@ -120,6 +120,29 @@
     (defmacro POP (RA)      (LD SP -4 RA)  ( ADDC SP -4 SP))
     (defmacro CALL (label)  (BR label LP))
     ;;
+
+    (defmacro RTN () (JMP LP))
+    (defmacro XRTN () (JMP XP))
+
+    (DEFMACRO GETFRAME (OFFSET REG) (LD BP  OFFSET  REG))
+    (DEFMACRO PUTFRAME (REG  OFFSET) (ST  REG  OFFSET  BP))
+    (DEFMACRO CALL (S N) BR(S LP) (SUBC SP  (* 4 N)  SP))
+    
+    (DEFMACRO ALLOCATE (N) (ADDC SP (* N 4) SP))
+    (DEFMACRO DEALLOCATE (N) (SUBC SP (* N 4) SP))
+
+    (DEFMACRO PRIV_OP (FNCODE) (BETAOPC 0 0 FNCODE 0))
+    (defmacro HALT () (PRIV_OP 0))
+    (defmacro RDCHAR () (PRIV_OP 1))
+    (defmacro WRCHAR () (PRIV_OP 2))
+    (defmacro CYCLE ()  (PRIV_OP 3))
+    (defmacro TIME ()   (PRIV_OP 4))
+    (defmacro CLICK ()  (PRIV_OP 5))
+    (defmacro RANDOM () (PRIV_OP 6))
+    (defmacro SEED ()   (PRIV_OP 7))
+    (defmacro SERVER () (PRIV_OP 8))
+
+    (DEFMACRO RESERVE (N)  (set $ (+ $ (* N 4))))
     ))
 
 

@@ -12,6 +12,7 @@
                (:file "symbol-table")
                (:file "env")
                (:file "util")
+               (:file "macro")
                (:file "regfile")
                (:file "instructions")
                (:file "microcode")
