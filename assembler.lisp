@@ -271,13 +271,6 @@
   ;; "link" in the beta
   (assemble (append beta.uasm code)))
 
-(test-assemble-temp '(1 2 3 4 5))
-(test-assemble-temp '((ADD r1 r2 r3)))
-(test-assemble-temp '((ADD $ $ $) (ADD $ $ $)))
-(test-assemble-temp '((set $ (+ $ 8)) $))
-
-
-
 (defun byte-addr-paused? (env)
   (env-get env 'cur-byte-addr-paused))
 
@@ -337,6 +330,14 @@
 
 ;; these tests for later
 '(progn
+
+  (test-assemble-beta '((ADD $ $ $) (ADD $ $ $))
+   (list 0 0 0 #x80 0 #x20 #x84 #x80))
+  
+  (test-assemble-beta '((set $ (+ $ 8)) $) '(0 0 0 0 0 0 0 0 8))
+
+
+  
   (test-assemble-beta '((add r1 2 3))
    (list #x00 #x10 #x61 #x80))
   (test-assemble-beta '(:start (add r1 r2 :start))
