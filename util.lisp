@@ -27,3 +27,8 @@
 
 (defun hexs (&rest args)
   (apply 'concatenate 'list (mapcar #'32-bit-hex-helper args)))
+
+
+(defun repeat (val n)
+  (if (eq n 0) (list)
+      (cons val (repeat val (- n 1)))))

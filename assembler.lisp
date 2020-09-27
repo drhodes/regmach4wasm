@@ -113,10 +113,6 @@
        (equal '$ (cadr item))
        ))
 
-(defun repeat (val n)
-  (if (eq n 0) (list)
-      (cons val (repeat val (- n 1)))))
-
 (defun affix-locations (env prog)
   (if (null prog) (list)
       (let ((item (car prog)))
