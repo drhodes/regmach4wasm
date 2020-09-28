@@ -32,3 +32,6 @@
 (defun repeat (val n)
   (if (eq n 0) (list)
       (cons val (repeat val (- n 1)))))
+
+(defun label->symbol (key)
+  (read-from-string (string key)))

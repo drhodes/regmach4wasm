@@ -106,7 +106,7 @@
         (val (caddr item)))
     (if (eq sym '$)
         (set-cur-byte-addr env val)
-        (env-put env sym (asm-eval env val)))))
+        (env-put env sym (asm-eval-expr env val (cur-byte-addr env))))))
 
 (defun match-set-current-byte? (item)
   (and (listp item)
@@ -120,9 +120,9 @@
       (let ((item (car prog)))
         (cond
           ((label? item) ;; track where the labels are
-           (env-put env item (cur-byte-addr env))
+           (env-put env (label->symbol item) (cur-byte-addr env))
            (affix-locations env (cdr prog)))
-
+          
           ((align? item) ;; .align
            (append (asm-eval-align env item)
                    (affix-locations env (cdr prog))))
