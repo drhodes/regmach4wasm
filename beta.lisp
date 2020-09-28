@@ -157,8 +157,8 @@
     (set VEC_MOUSE    20)            ;; Mouse interrupt
 
     ;; constant for the supervisor bit in the PC
-    (set PC_SUPERVISOR 0x80000000)    ;; the bit itself
-    (set PC_MASK       0x7fffffff)    ;; a mask for the rest of the PC
+    (set PC_SUPERVISOR #x80000000)    ;; the bit itself
+    (set PC_MASK       #x7fffffff)    ;; a mask for the rest of the PC
 
     ;; kernel-mode addresses for segmentation base and bounds
     (set SEG_BASE -4)    ;; base register
