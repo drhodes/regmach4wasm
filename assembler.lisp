@@ -4,9 +4,10 @@
 (defun comment (x) (list 'comment x))
 (defun comment? (x) (and (listp x) (eq 'comment (car x))))
 
-(defun asm-eval-defmacro (env expr)
-  (env-put env (macro-name expr) expr)
-  (comment 'macrodef))
+
+;; (defun asm-eval-defmacro (env expr)
+;;   (env-put env (macro-name expr) expr)
+;;   (comment 'macrodef))
 
 (defun label? (expr) (keywordp expr))
 
@@ -43,8 +44,6 @@
 
 (defun $? (expr) (eq expr '$))
 
-;;asdf
-
 ;; pass: define the macros
 ;; pass: establish pause-unpause-$ delimeters for toplevel macro calls.
 ;; pass: expand the macros
@@ -54,7 +53,10 @@
 (defun asm-eval-pass1 (env expr)
   (if (listp expr)
       (case (car expr)
-        (defmacro (asm-eval-defmacro env expr))
+        ;;(defmacro (put-asm-eval-defmacro env expr))
+        (defmacro (progn
+                    (put-macro env (macro-name expr) expr)
+                    (comment 'defmacro)))
         (otherwise expr))
       expr))
 
@@ -64,7 +66,7 @@
   (if (and (listp expr)
            (defined-macro? env (car expr)))      
       ;; expand the macro
-      (let* ((macrodef (env-get env (car expr)))
+      (let* ((macrodef (get-macro env (car expr) (length (cdr expr))))
              (mac-args (macro-args macrodef))
              (call-args (cdr expr))
              (call-env (env-append (env-elope env)
@@ -230,7 +232,8 @@
   )
 
 (progn
-  (test-assemble-beta '((reserve 2) $ $ $ $) (hexs :00000000 :00000000 :0b0a0908))
+  
+  ;;(test-assemble-beta '((reserve 2) $ $ $ $) (hexs :00000000 :00000000 :0b0a0908))
   
   (let ((env (make-environment)))
     (set-cur-byte-addr env 0)

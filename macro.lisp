@@ -27,6 +27,8 @@
 (defun defined-macro? (env sym)
   (check-type sym symbol)
   (and (symbolp sym)
-       (env-contains? env sym)       
-       (let ((val (env-get env sym)))
-         (eq 'defmacro (car val)))))
+       (env-contains? env sym)))
+       
+       ;; ;
+       ;; (let ((val (env-get env sym)))
+       ;;   (eq 'defmacro (car val)))))
