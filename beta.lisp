@@ -142,6 +142,31 @@
     (defmacro SEED ()   (PRIV_OP 7))
     (defmacro SERVER () (PRIV_OP 8))
 
+
+
+    ;; SVC calls; used for OS extensions
+
+    (defmacro SVC (code)      (betaopc #x01 0 code 0))
+
+    ;; Trap and interrupt vectors
+    (set VEC_RESET    0)             ;; Reset (powerup)
+    (set VEC_II       4)             ;; Illegal instruction (also SVC call)
+    (set VEC_SEGFAULT 8)             ;; Segmentation fault
+    (set VEC_CLK      12)            ;; Clock interrupt
+    (set VEC_KBD      16)            ;; Keyboard interrupt
+    (set VEC_MOUSE    20)            ;; Mouse interrupt
+
+    ;; constant for the supervisor bit in the PC
+    (set PC_SUPERVISOR 0x80000000)    ;; the bit itself
+    (set PC_MASK       0x7fffffff)    ;; a mask for the rest of the PC
+
+    ;; kernel-mode addresses for segmentation base and bounds
+    (set SEG_BASE -4)    ;; base register
+    (set SEG_BOUNDS -8)  ;; bounds register
+
+
+
+    
     (DEFMACRO RESERVE (N)  (set $ (+ $ (* N 4))))
     ))
 
