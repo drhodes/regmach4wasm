@@ -16,19 +16,17 @@
         (setf (elt vec num-args) mac))
       ;; else allocate a vector for the macros.
       (progn
-        (env-put env sym (make-array max-macro-args))
+        (env-put env sym (make-array max-macro-args :initial-element nil))
         (put-macro env sym mac))))
 
 (defun get-macro (env sym num-args)
   (if (env-contains? env sym)
-      (let ((vec (env-get env sym)))
-        (elt vec num-args))))
+      (let* ((vec (env-get env sym))
+             (macrodef (elt vec num-args)))
+        (if macrodef macrodef
+            (error (format nil "macro called ~a is defined for ~a arguments" sym num-args))))))
 
 (defun defined-macro? (env sym)
   (check-type sym symbol)
   (and (symbolp sym)
        (env-contains? env sym)))
-       
-       ;; ;
-       ;; (let ((val (env-get env sym)))
-       ;;   (eq 'defmacro (car val)))))

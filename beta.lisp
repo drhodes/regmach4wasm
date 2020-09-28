@@ -94,7 +94,7 @@
     ;; take this one out for now since the handling of macros with
     ;; different numbered args is questionable!
     
-    ;;(defmacro BEQ (RA LABEL RC)       (BETABR #x1C RA RC LABEL))
+    (defmacro BEQ (RA LABEL RC)       (BETABR #x1C RA RC LABEL))
     (defmacro BEQ (RA LABEL)          (BETABR #x1C RA r31 LABEL))
     (defmacro BF (RA LABEL RC)        (BEQ RA LABEL RC))
     (defmacro BF (RA LABEL)           (BEQ RA LABEL))

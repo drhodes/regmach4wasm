@@ -150,6 +150,8 @@
           (t (increment-cur-byte env 1)
              (cons item (affix-locations env (cdr prog))))))))
 
+
+
 (defun assemble (program)
   (let ((env (make-environment)))
     (env-put env 'macro-namespace (make-environment))
@@ -211,6 +213,8 @@
   (check-type addr number)
   (cond (($? expr) addr)
         ((numberp expr) expr)
+        ((label? expr) (env-get env (label->symbol expr)))
+        ((symbolp expr) (env-get env expr))
         ((listp expr) (case (car expr)
                         (+ (asm-eval-op env #'+ expr addr))
                         (- (asm-eval-op env #'- expr addr))
@@ -229,11 +233,27 @@
   ;; failing 
   (test-assemble-beta '($ $ $ $ (betabr 0 0 0 4)) (hexs :03020100 :0000ffff))
   (test-assemble-beta '($ $ (betabr 0 0 0 4) $ $) (hexs :00000100 :0000ffff :00000908))
+  (test-assemble-beta '($ $ (beq 0 0 0) $ $ 0 0) (hexs :00000100 :7000fffe :00000908))
+  (test-assemble-beta '((BR :step1)
+                        :A
+                        (LONG 10) (LONG 56) (LONG 27) (LONG 69) (LONG 73) (LONG 99)
+                        (LONG 44) (LONG 36) (LONG 10) (LONG 72) (LONG 71) (LONG 1)
+                        
+                        (set ALEN (/ (- $ A) 4))
+                        
+                        :step1)
+   (hexs :73ff0000))
   )
+
+
+
+
 
 (progn
   
-  ;;(test-assemble-beta '((reserve 2) $ $ $ $) (hexs :00000000 :00000000 :0b0a0908))
+  (test-assemble-beta '($ $ (add 0 0 0) $ $ 0 0) (hexs :00000100 :80000000 :00000908))
+  (test-assemble-beta '((reserve 2) $ $ $ $) (hexs :00000000 :00000000 :0b0a0908))
+  (test-assemble-code '(:a a) '(0))
   
   (let ((env (make-environment)))
     (set-cur-byte-addr env 0)
@@ -241,6 +261,17 @@
     (set-cur-byte-addr env 4)
     (unpause$ env)
     (cur-byte-addr env))
+
+  (let ((env (make-environment)))
+    (env-put env 'ASDF 42)
+    (env-get env (read-from-string (string :asdf))))
+
+  (test-assemble-beta '((long 123456)) (hexs :0001e240))
+  (test-assemble-beta '((long 123456) $ $ $ $) (hexs :0001e240 :07060504))
+
+
+  
+  (test-assemble-beta '((set x 2) (set y 3) (+ x y)) '(5))
   
   (test-assemble-beta '((ADD 1 2 3) (SUB 2 3 4) (ADD 4 5 6))
                       (hexs :80611000 :84821800 :80c42800))

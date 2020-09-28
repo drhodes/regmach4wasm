@@ -12,16 +12,16 @@
   (LONG 44) (LONG 36) (LONG 10) (LONG 72) (LONG 71) (LONG 1)
 
   ;; determine number of elements in A
-  (= ALEN (/ (- $ A) 4)) 
+  (set ALEN (/ (- $ A) 4)) 
 
   ;; Please enter your code for each of the steps below...
   ;; name some registers.
-  (= swapped r1)
-  (= i r2)
-  (= cur r3)
-  (= prev r4)
-  (= tmp r5)
-  (= idx r6)
+  (set swapped r1)
+  (set i r2)
+  (set cur r3)
+  (set prev r4)
+  (set tmp r5)
+  (set idx r6)
 
   :STEP1 (cmove 0 swapped)
   :STEP2 (cmove 0 i)
