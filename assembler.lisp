@@ -226,31 +226,102 @@
   (apply op (mapcar (lambda (x) (asm-eval-expr env x addr))
                     (cdr expr))))
 
+(defun test-assemble-code (code exp)
+  (unless (equal exp (pad (assemble code) 0 4))
+    (expected exp (pad (assemble code) 0 4))))
+
+(defun test-assemble-beta (code exp)
+  ;; "link" in the beta
+  (test-assemble-code (append beta.uasm code) exp))
+
 '(progn
-  ;; failing 
-  (test-assemble-beta '($ $ $ $ (betabr 0 0 0 4)) (hexs :03020100 :0000ffff))
-  (test-assemble-beta '($ $ (betabr 0 0 0 4) $ $) (hexs :00000100 :0000ffff :00000908))
-  (test-assemble-beta '($ $ (beq 0 0 0) $ $ 0 0) (hexs :00000100 :7000fffe :00000908))
-  (test-assemble-beta '((BR :step1)
-                        :A
-                        (LONG 10) (LONG 56) (LONG 27) (LONG 69) (LONG 73) (LONG 99)
-                        (LONG 44) (LONG 36) (LONG 10) (LONG 72) (LONG 71) (LONG 1)
-                        
-                        (set ALEN (/ (- $ A) 4))
-                        
-                        :step1)
-   (hexs :73ff0000))
+  ;; failing
+  ;;
   )
 
-
-
-
-
 (progn
+  ;; passing
+  (test-assemble-beta '($ $ (betabr 0 0 0 0) $ $ 0 0) (hexs :00000100 :0000fffe :00000908))
+
+  (test-assemble-beta '($ $ $ $ (betabr 0 0 0 0)) (hexs :03020100 :0000fffe))
+
+  (test-assemble-beta '((WORD -18) (WORD 5) (WORD -28) (WORD 6) (WORD -32) (WORD -16) (WORD -13)
+                        (WORD -79) (WORD -55) (WORD -36) (WORD -49) (WORD 22) (WORD -28) (WORD 2)
+                        (WORD -33) (WORD 10) (WORD 4) (WORD 23) (WORD 10) (WORD -55))                      
+                      (hexs 
+                       :ffffffee :00000005 :ffffffe4 :00000006 :ffffffe0 :fffffff0 :fffffff3
+                       :ffffffb1 :ffffffc9 :ffffffdc :ffffffcf :00000016 :ffffffe4 :00000002
+                       :ffffffdf :0000000a :00000004 :00000017 :0000000a :ffffffc9))
+  
+  (test-assemble-beta '($ $ (betabr 0 0 0 4) 0 0) (hexs :00000100 :0000ffff :00000000))
+  (test-assemble-beta '($ $ (betabr 0 0 0 4) $ $) (hexs :00000100 :0000ffff :00000908))
+  (test-assemble-beta '($ $ (beq 0 0 0) $ $ 0 0) (hexs :00000100 :7000fffe :00000908))
+  (test-assemble-beta '($ $ $ $ (beq 0 0 0) $ $) (hexs :03020100 :7000fffe :00000908))
+  (test-assemble-beta '($ $ $ $ (betabr 0 0 0 4)) (hexs :03020100 :0000ffff))
+
+  
+  (test-assemble-beta '((short 12345)) (hexs :00003039))
+  (test-assemble-beta '((word 0)) (hexs :00000000)) 
+  (test-assemble-beta '((word -12345678)) (hexs :ff439eb2))
+  (test-assemble-beta '((word 12345678)) (hexs :00bc614e))
+
+  (test-assemble-beta '(0 0 (betabr 0 0 0 4) $ $) (hexs :00000000 :0000ffff :00000908))
+  (test-assemble-beta '(0 0 0 0 (betabr 0 0 0 4)) (hexs :00000000 :0000ffff))
+  (test-assemble-code '($ $ $ $ (- 0 1)) (hexs :03020100 :000000ff))
+  (test-assemble-code '(-1) (hexs :000000ff))
+  (test-assemble-code '(-2) (hexs :000000fe))
+  (test-assemble-code '((- 1 2)) (hexs :000000ff))
+  
+  
+  (test-assemble-beta '(-1 -1) (hexs :0000ffff))
+  (test-assemble-beta '((- (>> (- step $) 2) 1) :step ) (hexs :000000ff))
+
+  
+  (test-assemble-beta '((- (>> (- 0 $) 2) 1)) (hexs :000000ff))
+  (test-assemble-beta '((BR step1) $ :step1) (hexs :73ff0000 :00000004))
+  (test-assemble-beta '((BR step1) $ :step1) (hexs :73ff0000 :00000004))
+
+  (test-assemble-beta '((>> 100 2)) (hexs :00000019))
+  (test-assemble-beta '((>> 100 3)) (hexs :0000000c))
+  (test-assemble-beta '((<< 1 1)) (hexs :00000002))
+  (test-assemble-beta '((<< 1 2)) (hexs :00000004))
+  (test-assemble-beta '((<< 1 3)) (hexs :00000008))
+  (test-assemble-beta '((<< 1 4)) (hexs :00000010))
+
+
+  (test-assemble-beta '((betaopc 0 0 0 0)) (hexs :00000000))
+  (test-assemble-beta '((betaopc 1 0 0 0)) (hexs :04000000))
+  (test-assemble-beta '((betaopc 0 1 0 0)) (hexs :00010000))
+  (test-assemble-beta '((betaopc 0 0 1 0)) (hexs :00000001))
+  (test-assemble-beta '((betaopc 0 0 0 1)) (hexs :00200000))
+  (test-assemble-beta '((betaopc 0 0 1 1)) (hexs :00200001))
+  (test-assemble-beta '((betaopc 0 1 0 1)) (hexs :00210000))
+  (test-assemble-beta '((betaopc 0 1 1 0)) (hexs :00010001))
+  (test-assemble-beta '((betaopc 0 1 1 1)) (hexs :00210001))
+  (test-assemble-beta '((betaopc 1 0 0 1)) (hexs :04200000))
+  (test-assemble-beta '((betaopc 1 0 1 0)) (hexs :04000001))
+  (test-assemble-beta '((betaopc 1 0 1 1)) (hexs :04200001))
+  (test-assemble-beta '((betaopc 1 1 0 0)) (hexs :04010000))
+  (test-assemble-beta '((betaopc 1 1 0 1)) (hexs :04210000))
+  (test-assemble-beta '((betaopc 1 1 1 0)) (hexs :04010001))
+  (test-assemble-beta '((betaopc 1 1 1 1)) (hexs :04210001))
+  
+  (test-assemble-beta '((betaopc 3 7 2 11)) (hexs :0d670002))
+  (test-assemble-beta '((betaopc 3 7 2 11) (betaopc 1 2 3 4)) (hexs :0d670002 :04820003))
+  
+  
+  
+  (test-assemble-beta '((BR :step1)
+                        (set $ 52)
+                        :step1) (hexs :73ff000c :00000000 :00000000 :00000000
+                                      :00000000 :00000000 :00000000 :00000000
+                                      :00000000 :00000000 :00000000 :00000000
+                                      :00000000))
+
   
   (test-assemble-beta '($ $ (add 0 0 0) $ $ 0 0) (hexs :00000100 :80000000 :00000908))
   (test-assemble-beta '((reserve 2) $ $ $ $) (hexs :00000000 :00000000 :0b0a0908))
-  (test-assemble-code '(:a a) '(0))
+  (test-assemble-code '(:a a) '(0 0 0 0))
   
   (let ((env (make-environment)))
     (set-cur-byte-addr env 0)
@@ -268,13 +339,13 @@
 
 
   
-  (test-assemble-beta '((set x 2) (set y 3) (+ x y)) '(5))
+  (test-assemble-beta '((set x 2) (set y 3) (+ x y)) '(5 0 0 0))
   
   (test-assemble-beta '((ADD 1 2 3) (SUB 2 3 4) (ADD 4 5 6))
                       (hexs :80611000 :84821800 :80c42800))
   
   (test-assemble-beta '((defmacro wrap (x) x x) (wrap 1) $ $) (hexs :03020101))
-  (test-assemble-beta '((ADD 0 0 0) $) (list 0 0 0 128 4))
+  (test-assemble-beta '((ADD 0 0 0) $) (list 0 0 0 128 4 0 0 0))
   (test-assemble-beta '((ADD $ $ $) (ADD $ $ $)) (list 0 0 0 #x80 0 #x20 #x84 #x80)) 
   (test-assemble-beta '($ $ $ $) (hexs :03020100))
   
@@ -288,29 +359,26 @@
   
   (test-assemble-beta '(0 0 0 $) (list 0 0 0 3))
   
-  (test-assemble-beta '((defmacro wrap (x) x) (wrap 1) $) '(1 1))
+  (test-assemble-beta '((defmacro wrap (x) x) (wrap 1) $) '(1 1 0 0))
   
-  (test-assemble-beta '((defmacro wrap (x) x x) $) '(0))
-  (test-assemble-beta '((set $ 5) $) '(0 0 0 0 0 5))
-  (test-assemble-beta '((+ 1 1) $) '(2 1))
+  (test-assemble-beta '((defmacro wrap (x) x x) $) '(0 0 0 0))
+  (test-assemble-beta '((set $ 5) $) '(0 0 0 0 0 5 0 0))
+  (test-assemble-beta '((+ 1 1) $) '(2 1 0 0))
   
 
-  (test-assemble-code '(1 (.align 5) 2) '(1 0 0 0 0 2))
-  (test-assemble-code '(1 (.align) 2) '(1 0 0 0 2))
-  (test-assemble-beta '((set $ (+ $ 8)) $) '(0 0 0 0 0 0 0 0 8))
+  (test-assemble-code '(1 (.align 5) 2) '(1 0 0 0 0 2 0 0))
+  (test-assemble-code '(1 (.align) 2) '(1 0 0 0 2 0 0 0))
+  (test-assemble-beta '((set $ (+ $ 8)) $) '(0 0 0 0 0 0 0 0 8 0 0 0))
 
   (test-assemble-beta '($ 1 2 $) '(0 1 2 3))
   
-  (test-assemble-beta '((add r1 2 3)) (list #x00 #x10 #x61 #x80))
-  (test-assemble-beta '(:start (add r1 r2 :start)) (list #x00 #x10 #x01 #x80))
-  (test-assemble-beta '(0 :start (add r1 r2 :start)) (list 0 0 0 0 #x00 #x10 #x21 #x80))
-  (test-assemble-beta '((BEQ 1 2)) (list #xff #xff #xe1 #x73))
-  
+  (test-assemble-beta '((add r1 2 3)) (hexs :80611000))
+  (test-assemble-beta '(:start (add r1 r2 :start)) (hexs :80011000))
+  (test-assemble-beta '(0 :start (add r1 r2 :start)) (hexs :00000000 :80211000))
+  (test-assemble-beta '((BEQ 1 2)) (hexs :73e1ffff))
 
-
-
-  (test-assemble-beta '((+ $ $)) '(0)) 
-  (test-assemble-beta '((set $ 10) (+ $ $)) '(0 0 0 0 0 0 0 0 0 0 20))
+  (test-assemble-beta '((+ $ $)) '(0 0 0 0)) 
+  (test-assemble-beta '((set $ 10) (+ $ $)) '(0 0 0 0 0 0 0 0 0 0 20 0))
   
   (test-assemble-beta '((betabr 0 0 0 0)) '(#xff #xff #x00 #x00))
   (test-assemble-beta '((betabr 0 0 4 0)) '(#xFF #xFF #x80 #x00))
@@ -320,37 +388,33 @@
                             (<< (% 0 32) 16)
                             (% (- (>> (- 4 $) 2) 1) 65536))
                          256))
-                      '(0))
-  
-  ;; The problem is that the macro is being expanded into 4
-  ;; bytes. Each byte must use the same cur-byte-loc ($), because
-  ;; those are the semantics. 
+                      '(0 0 0 0))
   
   (test-assemble-beta '((% (+ (<< 0 26) (<< (% 0 32) 21)
                             (<< (% 0 32) 16)
                             (% (- (>> (- 4 0) 2) 1) 65536))
                          256))
-                      '(0))
+                      '(0 0 0 0))
 
   (test-assemble-beta '((% (>> (+ (<< 0 26) (<< (% 0 32) 21)
                                 (<< (% 0 32) 16) (% (- (>> (- 4 $) 2) 1) 65536))
                             8)
                          256))
-                      '(0))
+                      '(0 0 0 0))
   
   (test-assemble-beta '((% (>> (+ (<< 0 26) (<< (% 0 32) 21)
                                 (<< (% 0 32) 16)
                                 (% (- (>> (- 4 $) 2) 1) 65536))
                             16)
                          256))
-                      '(0))
+                      '(0 0 0 0))
   
   (test-assemble-beta '((% (>> (>> (+ (<< 0 26) (<< (% 0 32) 21) (<< (% 0 32) 16)
                                     (% (- (>> (- 4 $) 2) 1) 65536))
                                 16)
                             8)
                          256))
-                      '(0))
+                      '(0 0 0 0))
   
 
   (test-assemble-beta '((betaopc 0 0 0 0)) '(#x00 #x00 #x00 #x00))
@@ -364,24 +428,10 @@
 
   ;;(defmacro BETABR (OP RA RC LABEL) (betaopc OP RA (- (>> (- LABEL $) 2) 1) RC))
   ;; OP=0 RA=0 RC=0 LABEL=4
-  (test-assemble-beta '((- (>> (- 4 $) 2) 1)) '(0))
-  (test-assemble-beta '((- (>> (- 0 $) 2) 1)) '(-1))
-  ;;(test-assemble-beta '((betaopc 1 2 3 4)) '(#x03 #x00 #x82 #x04))
+  (test-assemble-beta '((- (>> (- 4 $) 2) 1)) '(0 0 0 0))
+  (test-assemble-beta '((- (>> (- 0 $) 2) 1)) '(255 0 0 0))
+  (test-assemble-beta '((betaopc 1 2 3 4)) '(#x03 #x00 #x82 #x04))
 
   
   )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
