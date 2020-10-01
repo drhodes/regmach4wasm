@@ -44,3 +44,9 @@
 
 (defun label->symbol (key)
   (read-from-string (string key)))
+
+(defun take (n xs)
+  (if (or (< n 1) (null xs))
+      (list)
+      (cons (car xs) (take (- n 1) (cdr xs)))))
+
