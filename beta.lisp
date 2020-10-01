@@ -1,5 +1,11 @@
 (in-package #:regmach4wasm)
 
+;; 
+;; this file is a port of  ported from beta.uasm to Lisp.
+;; found in BSIM located http://computationstructures.org/exercises/sandboxes/bsim.html
+;; TODO: track this file down on github.
+;;
+
 (defparameter beta.uasm
   '(
     (set r0 0)
@@ -166,11 +172,89 @@
     (set SEG_BASE -4)    ;; base register
     (set SEG_BOUNDS -8)  ;; bounds register
 
+    (defmacro save-all-regs (where) (save-all-regs where r31))
 
+    (defmacro save-all-regs (where base-reg)
+      (ST r0 where base-reg)
+
+      (ST r1 (+ where 4) base-reg)
+      (ST r2 (+ where 8) base-reg)
+      (ST r3 (+ where 12) base-reg)
+      (ST r4 (+ where 16) base-reg)
+      (ST r5 (+ where 20) base-reg)
+      (ST r6 (+ where 24) base-reg)
+      (ST r7 (+ where 28) base-reg)
+      (ST r8 (+ where 32) base-reg)
+      (ST r9 (+ where 36) base-reg)
+      (ST r10 (+ where 40) base-reg)
+      (ST r11 (+ where 44) base-reg)      
+      (ST r12 (+ where 48) base-reg)            
+      (ST r13 (+ where 52) base-reg)                  
+      (ST r14 (+ where 56) base-reg)
+      (ST r15 (+ where 60) base-reg)
+      (ST r16 (+ where 64) base-reg)
+      (ST r17 (+ where 68) base-reg)
+      (ST r18 (+ where 72) base-reg)
+      (ST r19 (+ where 76) base-reg)
+      (ST r20 (+ where 80) base-reg)
+      (ST r21 (+ where 84) base-reg)
+      (ST r22 (+ where 88) base-reg)
+      (ST r23 (+ where 92) base-reg)
+      (ST r24 (+ where 96) base-reg)
+      (ST r25 (+ where 100) base-reg)
+      (ST r26 (+ where 104) base-reg)
+      (ST r27 (+ where 108) base-reg)      
+      (ST r28 (+ where 112) base-reg)      
+      (ST r29 (+ where 116) base-reg)      
+      (ST r30 (+ where 120) base-reg)      
+      (ST base-reg (+ where 124) base-reg))
 
     
-    (DEFMACRO RESERVE (N)  (set $ (+ $ (* N 4))))
-    ))
+    (defmacro restore-all-regs (where) (restore-all-regs where r31))
+    
+    (defmacro restore-all-regs (where base-reg)
+      (LD base-reg WHERE r0)
+      (LD base-reg (+ WHERE 4) r1)
+      (LD base-reg (+ WHERE 8) r2)
+      (LD base-reg (+ WHERE 12) r3)
+      (LD base-reg (+ WHERE 16) r4)
+      (LD base-reg (+ WHERE 20) r5)
+      (LD base-reg (+ WHERE 24) r6)
+      (LD base-reg (+ WHERE 28) r7)
+      (LD base-reg (+ WHERE 32) r8)
+      (LD base-reg (+ WHERE 36) r9)
+      (LD base-reg (+ WHERE 40) r10)
+      (LD base-reg (+ WHERE 44) r11)
+      (LD base-reg (+ WHERE 48) r12)
+      (LD base-reg (+ WHERE 52) r13)
+      (LD base-reg (+ WHERE 56) r14)
+      (LD base-reg (+ WHERE 60) r15)
+      (LD base-reg (+ WHERE 64) r16)
+      (LD base-reg (+ WHERE 68) r17)
+      (LD base-reg (+ WHERE 72) r18)
+      (LD base-reg (+ WHERE 76) r19)
+      (LD base-reg (+ WHERE 80) r20)
+      (LD base-reg (+ WHERE 84) r21)
+      (LD base-reg (+ WHERE 88) r22)
+      (LD base-reg (+ WHERE 92) r23)
+      (LD base-reg (+ WHERE 96) r24)
+      (LD base-reg (+ WHERE 100) r25)
+      (LD base-reg (+ WHERE 104) r26)
+      (LD base-reg (+ WHERE 108) r27)
+      (LD base-reg (+ WHERE 112) r28)
+      (LD base-reg (+ WHERE 116) r29)
+      (LD base-reg (+ WHERE 120) r30))
+
+
+    ;; Macro to extract and right-adjust a bit field from RA, and
+    ;; leave it in RB.  The bit field M:N, where M >= N.
+    (defmacro extract-field (RA M N RB)
+      ;; Shift left, to mask out high bits
+      (SHLC RA (- 31 M) RB)         
+      ;; Shift right, to mask out low bits.
+      (SHRC RB (- 31 (- M N)) RB))
+    
+    (DEFMACRO RESERVE (N)  (set $ (+ $ (* N 4))))))
 
 
 

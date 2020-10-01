@@ -6,9 +6,10 @@ keeping track of the VM state,
 
 Maybe there is a display. 
 
-** Stages.
-*** first stage defines the macros    
-*** second stage <2020-09-23 Wed>
+** Assembler
+*** Stages.
+**** first stage defines the macros    
+**** second stage <2020-09-23 Wed>
 expand the macros until they are all expanded.
 if there are any callable forms left, then a macro was not defined.
 
@@ -19,15 +20,15 @@ if there are any callable forms left, then a macro was not defined.
 - TODO consider assignments inside macros .. they should be local to
   the macro, or not be allowed at all.
 
-*** stage three 
-**** Next byte to be assembled
+**** stage three 
+***** Next byte to be assembled
 this is tracked in the environment for now. 
 lisp has dibs on the dot (.) char, so use ($) instead.
 
 uasm uses . = 24
 this will use (= $ 24)
 
-**** Labels
+***** Labels
 
 *** Design mistake 1. <2020-09-26 Sat 08:04>
 I waited until all the macros were expanded before figuring out when to
@@ -187,3 +188,9 @@ been deleted. All tests are passing now. <2020-10-01 Thu 15:53>
 
 
 
+
+*** Finishing porting beta.uasm to beta.lisp
+
+** Emulator.
+
+Need to load the memory 

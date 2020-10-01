@@ -247,8 +247,21 @@
 
 (progn
   ;; passing
+  
+  (test-assemble-beta '((restore-all-regs 0))
+                      (hexs :601f0000 :603f0004 :605f0008 :607f000c
+                            :609f0010 :60bf0014 :60df0018 :60ff001c
+                            :611f0020 :613f0024 :615f0028 :617f002c
+                            :619f0030 :61bf0034 :61df0038 :61ff003c
+                            :621f0040 :623f0044 :625f0048 :627f004c
+                            :629f0050 :62bf0054 :62df0058 :62ff005c
+                            :631f0060 :633f0064 :635f0068 :637f006c
+                            :639f0070 :63bf0074 :63df0078))
+  
+  (test-assemble-beta '((cmove 25 r0) (add r0 r0 r0)) (hexs :c01f0019 :80000000))
+  
+  (test-assemble-beta '($ $ (betabr $ $ $ $) $ $ 0 0) (hexs :00000100 :0842ffff :00000908))
   (test-assemble-beta '($ $ (betabr 0 0 0 0) $ $ 0 0) (hexs :00000100 :0000fffe :00000908))
-
   (test-assemble-beta '($ $ $ $ (betabr 0 0 0 0)) (hexs :03020100 :0000fffe))
 
   (test-assemble-beta '((WORD -18) (WORD 5) (WORD -28) (WORD 6) (WORD -32) (WORD -16) (WORD -13)
