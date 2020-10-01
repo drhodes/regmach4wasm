@@ -161,13 +161,19 @@
            ;; this is ugly.
            (result15 (wrap-macro-calls env result1))
            (result2 (repeat-expand-macro env result15))
-           (result3 (affix-locations env result2))
-           (result4 (progn
-                      (set-cur-byte-addr env 0)
-                      (replace-symbols env result3)))           
-           (result5 (progn (set-cur-byte-addr env 0)
-                           (asm-eval-prog env result4))))
+           (result3 (pass-affix-locations env result2))
+           (result4 (progn (set-cur-byte-addr env 0)
+                           (asm-eval-prog env result3)))
+           (result5 (mapcar #'fix-neg-byte result4))
+           )      
       result5)))
+
+(defun fix-neg-byte (n)
+  ;; adhere to 6.004x 
+  ;; https://github.com/6004x/6.004_tools/blob/c4c999250002e2a595402d4a7abe302c4e91fdd5/bsim/assemble.js#L347
+  ;; "numbers must be unsigned, so if they're less than zero we force them to be the unsigned"
+  (check-number n)
+  (if (< n 0) (+ #xFF n 1) n))
 
 (defun increment-cur-byte (env n)
   (env-put env 'cur-byte-addr
