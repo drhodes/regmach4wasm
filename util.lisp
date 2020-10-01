@@ -25,8 +25,17 @@
                     (subseq (string keystring) 4 6)
                     (subseq (string keystring) 6 8)))))
 
+
+
+(defun pad (xs val n)  
+  (let* ((len (length xs))
+         (size (- n (mod len n))))
+    (if (eq 0 (mod len n)) xs
+        (append xs (repeat val size)))))
+
 (defun hexs (&rest args)
-  (apply 'concatenate 'list (mapcar #'32-bit-hex-helper args)))
+  (apply 'concatenate 'list
+         (mapcar #'32-bit-hex-helper args)))
 
 
 (defun repeat (val n)

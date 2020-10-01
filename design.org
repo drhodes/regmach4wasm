@@ -7,9 +7,7 @@ keeping track of the VM state,
 Maybe there is a display. 
 
 ** Stages.
-
-*** first stage defines the macros
-    
+*** first stage defines the macros    
 *** second stage <2020-09-23 Wed>
 expand the macros until they are all expanded.
 if there are any callable forms left, then a macro was not defined.
@@ -21,7 +19,6 @@ if there are any callable forms left, then a macro was not defined.
 - TODO consider assignments inside macros .. they should be local to
   the macro, or not be allowed at all.
 
-
 *** stage three 
 **** Next byte to be assembled
 this is tracked in the environment for now. 
@@ -31,7 +28,6 @@ uasm uses . = 24
 this will use (= $ 24)
 
 **** Labels
-
 
 *** Design mistake 1. <2020-09-26 Sat 08:04>
 I waited until all the macros were expanded before figuring out when to
@@ -104,10 +100,90 @@ current-byte-location
 ***** An Aside
 Maybe using a set of lisp macros to implement the ISA would be better.
 
-
 *** Bug <2020-09-26 Sat 13:01>
 (set $ 42)
 
 not only must this set the cur-byte-location to 42, but it needs to
 fill from cur-location up to and including location 41 with zeros.
+
+*** Bug <2020-09-30 Wed 10:29>
+(test-assemble-beta '($ $ (betabr 0 0 0 4) $ $) (hexs :00000100 :0000ffff :00000908))
+;; test error: expecting (0 1 0 0 255 255 0 0 8 9 0 0),
+;;                  got: (0 1 0 0 0   0   0 0 8 9 0 0)
+
+Why 255 instead of 0?  When should the 255 show up?
+Check the each pass to see when the digits 5 and 6 show up.
+
+Could (.align) be causing problems?
+
+this works fine:
+(test-assemble-beta '($ $ (add 0 0 0) $ $) (hexs :00000100 :80000000 :00000908))
+
+this does not:
+(test-assemble-beta '($ $ $ $ (betabr 0 0 0 4)) (hexs :03020100 :0000ffff))
+test error: expecting (0 1 2 3 255 255 0 0), 
+                 got: (0 1 2 3 0   0   0 0)
+
+this works fine:
+(test-assemble-beta '($ $ $ $ (betabr 0 0 0 0)) (hexs :03020100 :0000ffff))
+
+Ok, so definitions:
+#+BEGIN_SRC common-lisp
+
+(defmacro BETABR (OP RA RC LABEL)
+   (betaopc OP RA (- (>> (- LABEL $) 2) 1) RC))
+
+
+(defmacro betaopc (OP RA CC RC)
+   (.align 4) 
+   (WORD (+ (<< OP 26)
+         (<< (% RC #x20) 21) 
+         (<< (% RA #x20) 16) 
+         (% CC #x10000))))
+
+
+#+END_SRC
+
+
+Check the JSIM source.
+
+Test SHORT macro
+Test WORD macro
+
+#+BEGIN_SRC 
+(assemble '((%
+                (+ (<< 0 26)
+                   (<< (% 0 32) 21)
+                   (<< (% 0 32) 16)
+                   (%
+                    (-
+                     (>> (- 4 0) 2)
+                     1)
+                    65536))
+                256)))
+#+END_SRC
+
+inspect an earlier assembler pass.
+#+BEGIN_SRC 
+  (%
+     (+ (<< 0 26)
+        (<< (% 0 32) 21)
+        (<< (% 0 32) 16)
+        (%
+         (-
+          (>> (- 4 $) 2) ;; this dollar sign is evaluating to zero. Why?
+          1)
+         65536))
+     256)
+#+END_SRC
+
+In which pass is it evaluating to zero?  The replace-symbols function
+is replacing the $ with the wrong symbol.
+
+The problem was an extraneous pass in the assembler that should have
+been deleted. All tests are passing now. <2020-10-01 Thu 15:53>
+
+
+
+
 

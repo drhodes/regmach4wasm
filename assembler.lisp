@@ -3,18 +3,7 @@
 
 (defun comment (x) (list 'comment x))
 (defun comment? (x) (and (listp x) (eq 'comment (car x))))
-
-
-;; (defun asm-eval-defmacro (env expr)
-;;   (env-put env (macro-name expr) expr)
-;;   (comment 'macrodef))
-
 (defun label? (expr) (keywordp expr))
-
-;; (defun asm-eval-label (env expr)
-;;   (env-put env expr (cur-byte-addr env))
-;;   (comment expr))
-
 (defun align? (expr) (and (listp expr)
                           (eq '.align  (car expr))))
 
@@ -34,9 +23,20 @@
   (ash (asm-eval-expr env (cadr expr) addr)
        (asm-eval-expr env (caddr expr) addr)))
 
+;; https://rosettacode.org/wiki/Bitwise_operations#Common_Lisp
+(defun shr (x width bits)
+  "Compute bitwise right shift of x by 'bits' bits, represented on 'width' bits"
+  (logand (ash x (- bits))
+          (1- (ash 1 width))))
+
 (defun asm-eval-right-shift (env expr addr) 
-  (ash (asm-eval-expr env (cadr expr) addr)
-       (- (asm-eval-expr env (caddr expr) addr))))
+  (shr (asm-eval-expr env (cadr expr) addr)
+       32
+       (asm-eval-expr env (caddr expr) addr)))
+
+;; (defun asm-eval-right-shift (env expr addr) 
+;;   (ash (asm-eval-expr env (cadr expr) addr)
+;;        (- (asm-eval-expr env (caddr expr) addr))))
 
 (defun asm-eval-mod (env expr addr) 
   (mod (asm-eval-expr env (cadr expr) addr)
@@ -53,7 +53,6 @@
 (defun asm-eval-pass1 (env expr)
   (if (listp expr)
       (case (car expr)
-        ;;(defmacro (put-asm-eval-defmacro env expr))
         (defmacro (progn
                     (put-macro env (macro-name expr) expr)
                     (comment 'defmacro)))
@@ -115,17 +114,19 @@
        (equal '$ (cadr item))
        ))
 
-(defun affix-locations (env prog)
+;; this is a pass.
+
+(defun pass-affix-locations (env prog)
   (if (null prog) (list)
       (let ((item (car prog)))
         (cond
           ((label? item) ;; track where the labels are
            (env-put env (label->symbol item) (cur-byte-addr env))
-           (affix-locations env (cdr prog)))
+           (pass-affix-locations env (cdr prog)))
           
           ((align? item) ;; .align
            (append (asm-eval-align env item)
-                   (affix-locations env (cdr prog))))
+                   (pass-affix-locations env (cdr prog))))
 
           ;; this clause needs to come before (set? item)
           ((match-set-current-byte? item)
@@ -133,24 +134,22 @@
                   (diff (- val (cur-byte-addr env))))
              (set-cur-byte-addr env val)
              (append (repeat 0 diff)
-                     (affix-locations env (cdr prog)))))
+                     (pass-affix-locations env (cdr prog)))))
           
           ((set? item) ;; assignment           
            (affix-assignment env item)
-           (affix-locations env (cdr prog)))
+           (pass-affix-locations env (cdr prog)))
 
           ((comment? item) ;; comment            
-           (affix-locations env (cdr prog)))
+           (pass-affix-locations env (cdr prog)))
 
           ((or (pause? item) (unpause? item))
            ;; keep the pause statements without incrementing 
-           (cons item (affix-locations env (cdr prog))))
+           (cons item (pass-affix-locations env (cdr prog))))
           
           ;; otherwise
           (t (increment-cur-byte env 1)
-             (cons item (affix-locations env (cdr prog))))))))
-
-
+             (cons item (pass-affix-locations env (cdr prog))))))))
 
 (defun assemble (program)
   (let ((env (make-environment)))
@@ -180,10 +179,8 @@
             (rest (cdr prog))
             (cur-addr (cur-byte-addr env)))
         (cond ((pause? item) (progn (pause$ env)
-                                    (format t "asm-eval-prog: pausing ~a, ~a ~%" item (cur-byte-addr env))
                                     (asm-eval-prog env rest)))
               ((unpause? item) (progn (unpause$ env)
-                                      (format t "asm-eval-prog: unpausing: ~a, ~a ~%" item (cur-byte-addr env))
                                       (asm-eval-prog env rest)))              
               (t (progn
                    (increment-cur-byte env 1)

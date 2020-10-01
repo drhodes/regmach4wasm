@@ -56,6 +56,9 @@
                (<< (% RC #x20) 21)
                (<< (% RA #x20) 16)
                (% CC #x10000))))
+
+    (defmacro BETABR (OP RA RC LABEL) (betaopc OP RA (- (>> (- LABEL $) 2) 1) RC))
+
     
     (defmacro ADD (RA RB RC) (betaop #x20 ra rb rc))
     (defmacro ADDC (RA C RC)   (betaopc #x30 RA C RC))
@@ -89,7 +92,6 @@
     (defmacro CMPLTC (RA C RC)    (betaopc #x35 RA C RC))
     
     ;;(defmacro BETABR (OP RA RC LABEL) (betaopc OP RA (- (>> (- LABEL $) 2) 1) RC))
-    (defmacro BETABR (OP RA RC LABEL) (betaopc OP RA (- (>> (- LABEL $) 2) 1) RC))
 
     ;; take this one out for now since the handling of macros with
     ;; different numbered args is questionable!
