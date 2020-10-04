@@ -1,4 +1,4 @@
-* assembler and VM for the BETA CPU
+* Assembler and VM for the BETA CPU
 <2020-09-23 Wed>
 
 The goal is to get tinyOS running on this, running a webserver that is
@@ -51,7 +51,7 @@ Here is the problem.
 (ADD $ $ $)
 ...
 
-shoud expand to 4 bytes
+should expand to 4 bytes
 
 byte 0: 00
 byte 1: 00
@@ -186,11 +186,39 @@ been deleted. All tests are passing now. <2020-10-01 Thu 15:53>
 
 
 
+*** Finishing porting beta.uasm to beta.lisp <2020-10-01 Thu 18:01> ok.
+
+** Emulator
+*** Back end
+**** Microcode
+- Read 4 bytes as a 32-bit little-endian uint.
+- disassemble instruction.
+- run through microcode interpreter.
+
+**** IO. Web-server <=> SBCL.
+At the moment the emulator will be running in SBCL, controlled from
+the web browser.
+
+*** Front end
+**** Display
+***** Modes 
+- fast mode where entire video buffer is fetched in one step
+- slow mode where each pixel is fetched one per step
+
+***** Video Memory
+Where should the video memory live?  
+
+***** Specs
+  how big should the display be?
+  320x240? That's 2400 words for 1-bit color display. for 8-bit color
+  we're looking at 19200 words, or 76K.
+
+- How about 160x120 with each display pixel equal to 4x4 screen pixels.
+  (* 160 120) = 19200 pixels
+  4 pixels per word.
+  (/ 19200 4) = 4800 words.
+
+*** OPTIONAL - Running on WASM
+How to run common lisp on WASM?
 
 
-
-*** Finishing porting beta.uasm to beta.lisp
-
-** Emulator.
-
-Need to load the memory 
