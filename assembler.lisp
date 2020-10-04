@@ -4,8 +4,8 @@
 (defun comment (x) (list 'comment x))
 (defun comment? (x) (and (listp x) (eq 'comment (car x))))
 (defun label? (expr) (keywordp expr))
-(defun align? (expr) (and (listp expr)
-                          (eq '.align  (car expr))))
+(defun align? (expr) (and (listp expr) (eq '.align  (car expr))))
+(defun text? (expr) (and (listp expr) (eq '.text  (car expr))))
 
 (defun asm-eval-align (env expr)
   (if (equal expr '(.align))
@@ -13,11 +13,18 @@
       (asm-eval-align env '(.align 4))
       ;; else
       (if (eq 0 (mod (cur-byte-addr env)
-                     (asm-eval env (cadr expr))))
+                     (asm-eval-expr env
+                                    (cadr expr)
+                                    (cur-byte-addr env))))
           nil
           (progn
             (increment-cur-byte env 1)
             (cons 0 (asm-eval-align env expr))))))
+
+(defun asm-eval-text (env expr)
+  (let ((chars (concatenate 'list (cadr expr))))
+    (increment-cur-byte env (length chars))
+    (mapcar #'char-code chars)))
 
 (defun asm-eval-left-shift (env expr addr) 
   (ash (asm-eval-expr env (cadr expr) addr)
@@ -107,6 +114,8 @@
         (set-cur-byte-addr env val)
         (env-put env sym (asm-eval-expr env val (cur-byte-addr env))))))
 
+
+
 (defun match-set-current-byte? (item)
   (and (listp item)
        (> (length item) 2) 
@@ -128,6 +137,10 @@
            (append (asm-eval-align env item)
                    (pass-affix-locations env (cdr prog))))
 
+          ((text? item) ;; .text
+           (append (asm-eval-text env item)
+                   (pass-affix-locations env (cdr prog))))
+          
           ;; this clause needs to come before (set? item)
           ((match-set-current-byte? item)
            (let* ((val (asm-eval-expr env (caddr item) (cur-byte-addr env)))
@@ -166,7 +179,11 @@
                            (asm-eval-prog env result3)))
            (result5 (mapcar #'fix-neg-byte result4))
            )      
-      result5)))
+      (make-assembly :env env
+                     :byte-list result5))))
+
+(defstruct assembly env byte-list)
+
 
 (defun fix-neg-byte (n)
   ;; adhere to 6.004x 
@@ -232,9 +249,12 @@
   (apply op (mapcar (lambda (x) (asm-eval-expr env x addr))
                     (cdr expr))))
 
+(defun assemble-with-beta (code)
+  (assemble (append beta.uasm code)))
+
 (defun test-assemble-code (code exp)
-  (unless (equal exp (pad (assemble code) 0 4))
-    (expected exp (pad (assemble code) 0 4))))
+  (unless (equal exp (pad (assembly-byte-list (assemble code)) 0 4))
+    (expected exp (pad (assembly-byte-list (assemble code)) 0 4))))
 
 (defun test-assemble-beta (code exp)
   ;; "link" in the beta
@@ -247,6 +267,7 @@
 
 (progn
   ;; passing
+  (test-assemble-beta '((.text "abcd")) (hexs :64636261))
   
   (test-assemble-beta '((restore-all-regs 0))
                       (hexs :601f0000 :603f0004 :605f0008 :607f000c
@@ -327,9 +348,7 @@
   
   (test-assemble-beta '((betaopc 3 7 2 11)) (hexs :0d670002))
   (test-assemble-beta '((betaopc 3 7 2 11) (betaopc 1 2 3 4)) (hexs :0d670002 :04820003))
-  
-  
-  
+
   (test-assemble-beta '((BR :step1)
                         (set $ 52)
                         :step1) (hexs :73ff000c :00000000 :00000000 :00000000
