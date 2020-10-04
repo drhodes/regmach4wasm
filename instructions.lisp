@@ -58,7 +58,7 @@
                    information. If desired then this can be computed through explicit
                    compare instructions.)                 
                  '((inc-pc)
-                   (set-reg rc (+ (reg ra) (sign-extend lit)))))
+                   (set-reg rc (+ (reg ra) (sign-extend literal)))))
 
 (add-instruction '(AND RA RB RC)
                  'OP
@@ -89,7 +89,7 @@
                    a byte offset then sign extended to 32 bits and added to the updated PC to form
                    the target address.)
                  
-                 '((set-var diff (- (/ (- (offset label) (offset current-instruction)) 4) 1))
+                 '((set-var diff (- (/ (- (offset literal) (offset current-instruction)) 4) 1))
                    (inc-pc)
                    (set-var effective-address (+ pc (* 4 (sign-extend diff))))
                    (set-var temp (reg ra))

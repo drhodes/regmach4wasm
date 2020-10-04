@@ -14,27 +14,37 @@
          (byte-list (assembly-byte-list result))
          (env (assembly-env result)))    
     (mcvm-load-list (emu-microcode-vm emu) byte-list)
-
     (setf (emu-assembler-env emu) env)
     emu))
 
+(defun emu-execute-opc (emu byte-list instruction)
+  (let ((env (make-environment))
+        (rc-segment (select-bits byte-list 25 21))
+        (ra-segment (select-bits byte-list 20 16))
+        (lit-segment (select-bits byte-list 15 0)))
+    (env-append env `((ra ,ra-segment)
+                      (rc ,rc-segment)
+                      (literal ,lit-segment)))
+    
+    (eval-mc-prog (emu-microcode-vm emu)
+                  (bind-vars env (instruction-microcode instruction)))))
 
-(defun emu-execute-opc (emu byte-list instruction) nil)
 
 (defun emu-execute-op (emu byte-list instruction)
   (let ((env (make-environment))
-        (rc-segment (select-bits byte-list 25 41))
+        (rc-segment (select-bits byte-list 25 21))
         (ra-segment (select-bits byte-list 20 16))
         (rb-segment (select-bits byte-list 15 11)))
-    (env-put env 'ra ra-segment)
-    (env-put env 'rb rb-segment)
-    (env-put env 'rc rc-segment)
-    (env-put env 'pc (mcvm-pc (emu-microcode-vm emu)))
-    env))
+    (env-append env `((ra ,ra-segment)
+                      (rb ,rb-segment)
+                      (rc ,rc-segment)))
+    
+    (eval-mc-prog (emu-microcode-vm emu)
+                  (bind-vars env (instruction-microcode instruction)))))
 
 (defun emu-execute-one-instruction (emu byte-list)
   (let* ((opcode (select-bits byte-list 31 26))
-         (instruction (get-instruction opcode)))
+         (instruction (get-instruction opcode)))    
     (case (instruction-layout instruction)
       (OP (emu-execute-op emu byte-list instruction))
       (OPC (emu-execute-opc emu byte-list instruction)))))
@@ -42,21 +52,14 @@
 (defun emu-step (emu)
   ;; fetch instruction
   (let* ((vm (emu-microcode-vm emu))
-         (next-inst (mcvm-fetch-next-inst vm)))
+         (next-inst (mcvm-fetch-inst vm)))
     ;; execute next instruction
     (emu-execute-one-instruction emu next-inst)))
 
-
-
 (progn
-  
-  (emu-load
-   '((ADD 1 2 3)
-     (SUB 2 3 4)
-     (ADD 4 5 6)))
-
-
-  ;; end progn
-  )
-
-
+  (let ((emu (emu-load '((CMOVE 3 r0)
+                         (ADD r0 r0 r0)
+                         (halt)))))
+    (emu-step emu)
+    (emu-step emu) 
+  ))

@@ -10,15 +10,6 @@
   (pc 0)
   (memory (make-ram)))
 
-(defun mcvm-ram-set (mcvm byte-addr byte)
-  (ram-set (mcvm-memory mcvm) byte-addr byte))
-
-(defun mcvm-ram-get (mcvm byte-addr byte)
-  (ram-get (mcvm-memory mcvm) byte-addr))
-
-(defun mcvm-load-list (mcvm byte-list)
-  (ram-load-list (mcvm-memory mcvm) byte-list))
-
 (defun mcvm-reset (mcvm)
   (setf (mcvm-regfile mcvm) (make-regfile))
   (setf (mcvm-pc mcvm) 0)
@@ -27,7 +18,27 @@
 
 (defun new-mcvm () (mcvm-reset (make-mcvm)))
 
+
+(defun mcvm-ram-set (mcvm addr byte)
+  (ram-set (mcvm-memory mcvm) addr byte))
+
+(defun mcvm-ram-get (mcvm addr byte)
+  (ram-get (mcvm-memory mcvm) addr))
+
+(defun mcvm-load-list (mcvm byte-list)
+  (ram-load-list (mcvm-memory mcvm) byte-list))
+
+(defun mcvm-fetch-inst (vm)
+  ;; grab 4 bytes starting from PC
+  (let ((ram (mcvm-memory vm))
+        (pc (mcvm-pc vm)))
+    (list (ram-get ram (+ pc 0))
+          (ram-get ram (+ pc 1))
+          (ram-get ram (+ pc 2))
+          (ram-get ram (+ pc 3)))))
+
 (defun mcvm-set-reg (mcvm reg val)
+  (check-type reg number)
   (regfile-set-reg (mcvm-regfile mcvm) reg val))
 
 (defun mcvm-get-reg (mcvm reg)
@@ -59,10 +70,7 @@
 (defun eval-set-reg (vm env inst)
   (let ((reg (cadr inst))
         (val (caddr inst)))
-    (check-type reg symbol)    
-    (mcvm-set-reg vm
-                  (reg-to-num reg)
-                  (eval-mc vm env val))))
+    (mcvm-set-reg vm reg (eval-mc vm env val))))
 
 (defun instruction-arguments (inst) (cdr inst))
 
@@ -108,11 +116,18 @@
             (bind-vars env microcode))))
 
 (defun eval-get-reg (vm expr)  
-  (mcvm-get-reg vm (reg-to-num (cadr expr))))
+  (mcvm-get-reg vm (cadr expr)))
+
+(defun eval-sign-extend (vm env expr)
+  ;; (sign-extend abc)
+  (let ((x (eval-mc env vm (cadr expr))))
+    (check-type x number)
+    x))
 
 (defun eval-mc (vm env expr)
+  (format t "eval-mc: ~a ~%" expr)
   (cond ((numberp expr) expr) 
-        ((match-instruction? expr) (eval-instruction vm env expr))
+        ;;((match-instruction? expr) (eval-instruction vm env expr))
         ((listp expr) (case (car expr)        
                         (+ (eval-op vm env #'+ expr))
                         (- (eval-op vm env #'- expr))
@@ -124,10 +139,10 @@
                         (set-var (eval-set-var vm env expr))
                         (set-reg (eval-set-reg vm env expr))
                         (reg (eval-get-reg vm expr))
+                        (sign-extend (eval-sign-extend vm env expr))
                         )) 
         ((eq 'pc expr) (eval-get-pc vm))
         ((symbolp expr) (symbol-table-get env expr))
-        ((register-p expr) (reg-to-num expr))
         (t (error (format nil "unhandled case in eval-mc: ~a" expr)))))
 
 (defun eval-mc-prog (vm prog)
