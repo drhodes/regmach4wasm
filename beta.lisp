@@ -49,6 +49,9 @@
     (defmacro short (x) (% x #x100) (% (>> x 8) #x100))
     (defmacro long (x) (short x) (short (>> x 16)))
     (defmacro word (x) (short x) (short (>> x 16)))
+
+    (defmacro storage (num-words) (set $ (+ $ (* 4 num-words))))
+    
     (defmacro betaop (OP RA RB RC)     
       (.align 4)
       (WORD (+ (<< OP 26)
