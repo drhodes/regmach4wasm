@@ -22,7 +22,7 @@
 (defun mcvm-reset (mcvm)
   (setf (mcvm-regfile mcvm) (make-regfile))
   (setf (mcvm-pc mcvm) 0)
-  (setf (mvcm-memory mcvm) (make-ram))
+  (setf (mcvm-memory mcvm) (make-ram))
   mcvm)
 
 (defun new-mcvm () (mcvm-reset (make-mcvm)))
@@ -155,14 +155,8 @@
    (expected 4 (mcvm-pc vm))))
 
 (eval-mc-prog-with
- '((set-reg r0 42))
+ '((set-reg 0 42))
  (lambda (vm)
    (expected 42 (mcvm-get-reg vm 0))))
 
-'(eval-mc-prog-with
-  '((set-reg r0 1)
-    (set-reg r1 2)
-    (ADD r0 r1 r2))
-  (lambda (vm)
-    (expected 3 (mcvm-get-reg vm 2))
-    (expected 4 (mcvm-pc vm))))
+

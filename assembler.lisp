@@ -1,6 +1,9 @@
 (in-package #:regmach4wasm)
 (declaim (optimize (debug 3))) 
 
+
+(defstruct assembly env byte-list)
+
 (defun comment (x) (list 'comment x))
 (defun comment? (x) (and (listp x) (eq 'comment (car x))))
 (defun label? (expr) (keywordp expr))
@@ -182,7 +185,6 @@
       (make-assembly :env env
                      :byte-list result5))))
 
-(defstruct assembly env byte-list)
 
 
 (defun fix-neg-byte (n)

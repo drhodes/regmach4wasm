@@ -70,7 +70,7 @@
                    (set-reg rc (bit-and (reg ra) (reg rb)))))
 
 (add-instruction '(ANDC RA literal RC)
-                 'OP
+                 'OPC
                  #b101000
                  '(This performs the bitwise boolean AND function between the
                    contents of register Ra and literal. The result is written
@@ -78,8 +78,8 @@
                  '((inc-pc)
                    (set-reg rc (bit-and (reg ra) (sign-extend rb)))))
 
-(add-instruction '(BEQ RA label RC)
-                 'OP
+(add-instruction '(BEQ RA literal RC)
+                 'OPC
                  #b011100                 
                  '(The PC of the instruction following the BEQ instruction (the updated PC)
                    is written to register Rc. If the contents of register Ra are zero then the

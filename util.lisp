@@ -47,3 +47,4 @@
       (list)
       (cons (car xs) (take (- n 1) (cdr xs)))))
 
+(defun unimplemented () (error "unimplemented"))
