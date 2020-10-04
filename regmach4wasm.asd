@@ -9,14 +9,15 @@
   :depends-on ("fiasco")
   
   :components ((:file "package")
+               (:file "util")
                (:file "symbol-table")
                (:file "env")
-               (:file "util")
                (:file "macro")
-               (:file "regfile")
-               (:file "instructions")
-               (:file "microcode")
-               (:file "beta.lisp") ;; this contains macrodefs for beta.uasm
+               (:file "beta") ;; this contains macrodefs for beta.uasm
                (:file "assembler") 
-              ))
+               (:file "instructions")
+               (:file "regfile")
+               (:file "microcode")
+               (:file "emu") 
+             ))
 

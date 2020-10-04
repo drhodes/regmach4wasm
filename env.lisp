@@ -30,9 +30,11 @@
 
 (defun env-append (env pairs)
   (check-type env environment)
-  (mapcar (lambda (pair) (env-put env (car pair) (cadr pair))) pairs)
-  env
-  )
+  (mapcar (lambda (pair)
+            (env-put env (car pair)
+                     (cadr pair)))
+          pairs)
+  env)
 
 (defun env-lookup (env sym)
   (check-type env environment)
@@ -45,3 +47,10 @@
           (env-get env sym)
           ;; else look in and outer scope.
           (env-lookup (environment-parent env) sym))))
+
+(defun bind-vars (env expr)
+  (check-type env environment)
+  (cond ((listp expr) (mapcar (lambda (x) (bind-vars env x)) expr))
+        ((symbolp expr) (let ((replacement (env-get env expr)))
+                          (if replacement replacement expr)))
+        (t expr)))

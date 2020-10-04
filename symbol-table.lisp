@@ -4,12 +4,10 @@
 
 (defun symbol-table-put (symtab sym val)
   (check-type symtab symbol-table)
-  (check-type sym symbol) 
   (setf (gethash sym (symbol-table-store symtab)) val))
 
 (defun symbol-table-get (symtab sym) 
   (check-type symtab symbol-table)
-  (check-type sym symbol)
   (gethash sym (symbol-table-store symtab)))
 
 ;; (progn

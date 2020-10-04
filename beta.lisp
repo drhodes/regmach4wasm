@@ -157,16 +157,16 @@
     (defmacro SVC (code)      (betaopc #x01 0 code 0))
 
     ;; Trap and interrupt vectors
-    (set VEC_RESET    0)             ;; Reset (powerup)
-    (set VEC_II       4)             ;; Illegal instruction (also SVC call)
-    (set VEC_SEGFAULT 8)             ;; Segmentation fault
-    (set VEC_CLK      12)            ;; Clock interrupt
-    (set VEC_KBD      16)            ;; Keyboard interrupt
-    (set VEC_MOUSE    20)            ;; Mouse interrupt
+    (set VEC-RESET    0)             ;; Reset (powerup)
+    (set VEC-II       4)             ;; Illegal instruction (also SVC call)
+    (set VEC-SEGFAULT 8)             ;; Segmentation fault
+    (set VEC-CLK      12)            ;; Clock interrupt
+    (set VEC-KBD      16)            ;; Keyboard interrupt
+    (set VEC-MOUSE    20)            ;; Mouse interrupt
 
     ;; constant for the supervisor bit in the PC
-    (set PC_SUPERVISOR #x80000000)    ;; the bit itself
-    (set PC_MASK       #x7fffffff)    ;; a mask for the rest of the PC
+    (set PC-SUPERVISOR #x80000000)    ;; the bit itself
+    (set PC-MASK       #x7fffffff)    ;; a mask for the rest of the PC
 
     ;; kernel-mode addresses for segmentation base and bounds
     (set SEG_BASE -4)    ;; base register
@@ -253,6 +253,7 @@
       (SHLC RA (- 31 M) RB)         
       ;; Shift right, to mask out low bits.
       (SHRC RB (- 31 (- M N)) RB))
+
     
     (DEFMACRO RESERVE (N)  (set $ (+ $ (* N 4))))))
 

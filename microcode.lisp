@@ -1,14 +1,28 @@
 ;;;; microcode.lisp
 (in-package :regmach4wasm)
+(declaim (optimize (debug 3)))
 
 ;; -----------------------------------------------------------------------------
 ;; mcvm
 
-(defstruct mcvm regfile (pc 0))
+(defstruct mcvm
+  (regfile (make-regfile))
+  (pc 0)
+  (memory (make-ram)))
+
+(defun mcvm-ram-set (mcvm byte-addr byte)
+  (ram-set (mcvm-memory mcvm) byte-addr byte))
+
+(defun mcvm-ram-get (mcvm byte-addr byte)
+  (ram-get (mcvm-memory mcvm) byte-addr))
+
+(defun mcvm-load-list (mcvm byte-list)
+  (ram-load-list (mcvm-memory mcvm) byte-list))
 
 (defun mcvm-reset (mcvm)
   (setf (mcvm-regfile mcvm) (make-regfile))
   (setf (mcvm-pc mcvm) 0)
+  (setf (mvcm-memory mcvm) (make-ram))
   mcvm)
 
 (defun new-mcvm () (mcvm-reset (make-mcvm)))
@@ -71,13 +85,6 @@
 
 (defun eval-get-pc (vm) (mcvm-pc vm))
 
-(defun zip (xs ys)
-  (if (or (null xs) (null ys))
-      (list)
-      (cons (list (car xs) (car ys))
-            (zip (cdr xs) (cdr ys)))))
-
-
 (defun eval-instruction (vm env expr)
   ;; expr is an instruction in this form (ADD r1 r2 r3)
   ;; grab the instruction opcode
@@ -100,14 +107,12 @@
     (mapcar (lambda (stmt) (eval-mc vm env stmt))
             (bind-vars env microcode))))
 
-(declaim (optimize (debug 3)))
-
 (defun eval-get-reg (vm expr)  
   (mcvm-get-reg vm (reg-to-num (cadr expr))))
 
 (defun eval-mc (vm env expr)
   (cond ((numberp expr) expr) 
-        ((instruction? expr) (eval-instruction vm env expr))
+        ((match-instruction? expr) (eval-instruction vm env expr))
         ((listp expr) (case (car expr)        
                         (+ (eval-op vm env #'+ expr))
                         (- (eval-op vm env #'- expr))
@@ -154,12 +159,10 @@
  (lambda (vm)
    (expected 42 (mcvm-get-reg vm 0))))
 
-(eval-mc-prog-with
- '((set-reg r0 1)
-   (set-reg r1 2)
-   (ADD r0 r1 r2))
- (lambda (vm)
-   (expected 3 (mcvm-get-reg vm 2))
-   (expected 4 (mcvm-pc vm))))
-
-
+'(eval-mc-prog-with
+  '((set-reg r0 1)
+    (set-reg r1 2)
+    (ADD r0 r1 r2))
+  (lambda (vm)
+    (expected 3 (mcvm-get-reg vm 2))
+    (expected 4 (mcvm-pc vm))))

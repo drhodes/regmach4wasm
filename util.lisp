@@ -1,11 +1,10 @@
 (in-package #:regmach4wasm)
 
-(defun bind-vars (env expr)
-  (check-type env environment)
-  (cond ((listp expr) (mapcar (lambda (x) (bind-vars env x)) expr))
-        ((symbolp expr) (let ((replacement (env-get env expr)))
-                          (if replacement replacement expr)))
-        (t expr)))
+(defun zip (xs ys)
+  (if (or (null xs) (null ys))
+      (list)
+      (cons (list (car xs) (car ys))
+            (zip (cdr xs) (cdr ys)))))
 
 ;; need figure out how bsim handles these differences.
 (defun check-number (expr)
@@ -24,8 +23,6 @@
                     (subseq (string keystring) 2 4)
                     (subseq (string keystring) 4 6)
                     (subseq (string keystring) 6 8)))))
-
-
 
 (defun pad (xs val n)  
   (let* ((len (length xs))
