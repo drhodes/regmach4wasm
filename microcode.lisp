@@ -122,16 +122,33 @@
   (mcvm-get-reg vm (cadr expr)))
 
 (defun eval-sign-extend (vm env expr)
-  ;; (sign-extend abc)
-  (let ((x (eval-mc env vm (cadr expr))))
-    (check-type x number)
-    x))
+  (sign-extend-16 (eval-mc vm env (cadr expr))))
+
+
+;;(defun eval-current-instruction (vm) (- (mcvm-pc vm) 4))
+(defun eval-current-instruction (vm) (mcvm-pc vm))
+
+(defun eval-if (vm env expr)
+  (let ((test (cadr expr))
+        (then (caddr expr))
+        (else (cadddr expr)))
+    (if (eval-mc vm env test)
+        (eval-mc vm env then)
+        (eval-mc vm env else))))
+
+(defun eval-eq (vm env expr)
+  (eq (eval-mc vm env (cadr expr))
+      (eval-mc vm env (caddr expr))))
+
 
 (defun eval-mc (vm env expr)
+  (check-type env environment)
+  (check-type vm mcvm)
   (format t "eval-mc: ~a ~%" expr)
   (cond ((numberp expr) expr) 
         ;;((match-instruction? expr) (eval-instruction vm env expr))
-        ((listp expr) (case (car expr)        
+        ((listp expr) (case (car expr)
+                        (break (break)) ;; how to add break to an interpreter. 
                         (+ (eval-op vm env #'+ expr))
                         (- (eval-op vm env #'- expr))
                         (* (eval-op vm env #'* expr))
@@ -143,14 +160,23 @@
                         (set-reg (eval-set-reg vm env expr))
                         (reg (eval-get-reg vm expr))
                         (sign-extend (eval-sign-extend vm env expr))
-                        )) 
+                        (if (eval-if vm env expr))
+                        (eq (eval-eq vm env expr))
+                        (otherwise (error (format nil "unhandled case in eval-mc: ~a" expr)))))
+        ((eq 'current-instruction expr) (eval-current-instruction vm))
         ((eq 'pc expr) (eval-get-pc vm))
-        ((symbolp expr) (symbol-table-get env expr))
+        ((eq 'nop expr) 0) ;; is nil the right thing to return here?
+        ((symbolp expr) (env-get env expr))
         (t (error (format nil "unhandled case in eval-mc: ~a" expr)))))
 
+
+
+
+
 (defun eval-mc-prog (vm prog)
-  (progn (mapcar (lambda (stmt) (eval-mc vm (make-symbol-table) stmt)) prog)
-         vm))
+  (let ((env (make-environment)))
+    (progn (mapcar (lambda (stmt) (eval-mc vm env stmt)) prog)
+           vm)))
 
 ;; -----------------------------------------------------------------------------
 ;; tests
@@ -177,4 +203,55 @@
  (lambda (vm)
    (expected 42 (mcvm-get-reg vm 0))))
 
+(eval-mc-prog-with
+ '((set-var temp 42)
+   (set-reg 0 temp))
+ (lambda (vm)
+   (expected 42 (mcvm-get-reg vm 0))))
 
+(eval-mc-prog-with
+ '((if (eq 0 0) 
+       (set-reg 0 1)
+       (set-reg 0 0)))
+ (lambda (vm)
+   (expected 1 (mcvm-get-reg vm 0))))
+
+(eval-mc-prog-with
+ '((set-var temp 42)
+   (if (eq temp 42) 
+       (set-reg 0 1)
+       (set-reg 0 0)))
+ (lambda (vm)
+   (expected 1 (mcvm-get-reg vm 0))))
+
+(eval-mc-prog-with
+ '((set-var temp 42)
+   (if (eq temp temp) 
+       (set-reg 0 1)
+       (set-reg 0 0)))
+ (lambda (vm)
+   (expected 1 (mcvm-get-reg vm 0))))
+
+(eval-mc-prog-with
+ '((set-var temp 41)
+   (if (eq temp 42) 
+       (set-reg 0 1)
+       (set-reg 0 0)))
+ (lambda (vm)
+   (expected 0 (mcvm-get-reg vm 0))))
+
+(eval-mc-prog-with
+ '((set-reg 0 (sign-extend 65535)))
+ (lambda (vm)
+   (expected -1 (mcvm-get-reg vm 0))))
+
+(defun eval-with-expect-r0 (value program)
+  (eval-mc-prog-with program (lambda (vm)
+                               (expected value (mcvm-get-reg vm 0)))))
+
+(eval-with-expect-r0 -1
+                     '((set-reg 0 (sign-extend 65535))))
+
+(eval-with-expect-r0 4
+                     '((set-pc 4)
+                       (set-reg 0 current-instruction)))
