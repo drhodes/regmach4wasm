@@ -1,6 +1,7 @@
 ;;;; package.lisp
 
 (defpackage #:regmach4wasm
-  (:use #:cl))
+  (:use :cl ; :hunchentoot
+        ))
 
 
