@@ -13,7 +13,7 @@ Maybe there is a display.
 expand the macros until they are all expanded.
 if there are any callable forms left, then a macro was not defined.
 
-- TODO all macro definitions need to go into the multiargument vector
+- DONE all macro definitions need to go into the multiargument vector
   also, make a cleaner/std interface for storing/getting macros from the
   environment.
 
