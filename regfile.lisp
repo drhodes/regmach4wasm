@@ -21,11 +21,6 @@
     (error "regfile-get got a bad register"))
   (aref (regfile-regs-int-32 rf) reg))
 
-(defun expected (exp got)
-  (if (eq exp got)
-      'PASS
-      (error (format nil "test error: expecting ~a, got: ~a" exp got))))
-
 (defun test-with-regfile (test-func)
   (apply test-func (list (make-regfile))))
 
@@ -38,8 +33,4 @@
    (regfile-set-reg rf 0 1)
    (expected (regfile-get-reg rf 0) 1)))
 
-
-(defvar int-registers '(r0 r1 r2 r3 r4 r5 r6 r7 r8 r9
-                        r10 r11 r12 r13 r14 r15 r16 r17 r18 r19
-                        r20 r21 r22 r23 r24 r25 r26 r27 r28 r29 r30 r31))
 

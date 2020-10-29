@@ -1,8 +1,8 @@
 (in-package #:regmach4wasm)
 (declaim (optimize (debug 3)))
 
-
-(defconstant max-macro-args 100)
+(defconstant max-macro-args 100
+  "The maximum number of args a macro may have.")
 
 (defun macro-name (expr) (cadr expr))
 (defun macro-args (expr) (caddr expr))

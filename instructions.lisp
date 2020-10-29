@@ -151,9 +151,3 @@
 ;; XORC
 ;; XNORC 
 
-
-(defun match-instruction? (xs)
-  (and (listp xs)
-       (> (length xs) 0)
-       (symbolp (car xs))
-       (not (eq nil (symbol-table-get *instructions* (car xs))))))

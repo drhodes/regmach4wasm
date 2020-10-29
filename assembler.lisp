@@ -178,12 +178,18 @@
            (result15 (wrap-macro-calls env result1))
            (result2 (repeat-expand-macro env result15))
            (result3 (pass-affix-locations env result2))
-           (result4 (progn (set-cur-byte-addr env 0)
-                           (asm-eval-prog env result3)))
+           (result4 (progn (set-cur-byte-addr env 0) (asm-eval-prog env result3)))
            (result5 (mapcar #'fix-neg-byte result4))
            )      
-      (make-assembly :env env
-                     :byte-list result5))))
+      (make-assembly :env env :byte-list result5))))
+
+'(progn
+  ;; failing
+  ;;
+
+  ;; end progn
+  )
+
 
 
 
@@ -192,7 +198,9 @@
   ;; https://github.com/6004x/6.004_tools/blob/c4c999250002e2a595402d4a7abe302c4e91fdd5/bsim/assemble.js#L347
   ;; "numbers must be unsigned, so if they're less than zero we force them to be the unsigned"
   (check-number n)
-  (if (< n 0) (+ #xFF n 1) n))
+  (if (< n 0)
+      (+ #xFF n 1)
+      n))
 
 (defun increment-cur-byte (env n)
   (env-put env 'cur-byte-addr
@@ -262,13 +270,15 @@
   ;; "link" in the beta
   (test-assemble-code (append beta.uasm code) exp))
 
-'(progn
-  ;; failing
-  ;;
-  )
 
 (progn
   ;; passing
+  (test-assemble-beta '($ $ $
+                        :start
+                        (add r0 r0 r0)
+                        (beq r0 start r0)
+                        (add r0 r0 r0)) (hexs :00020100 :80000000 :7000fffd :80000000))
+
   (test-assemble-beta '((.text "abcd")) (hexs :64636261))
   
   (test-assemble-beta '((restore-all-regs 0))
