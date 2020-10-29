@@ -16,13 +16,17 @@
   (setf (mcvm-memory mcvm) (make-ram))
   mcvm)
 
-(defun new-mcvm () (mcvm-reset (make-mcvm)))
+(defun mcvm-fmt-ram (mcvm) (ram-fmt (mcvm-memory mcvm)))
 
+(defun mcvm-ram-size (mcvm)  
+  (ram-size (mcvm-memory mcvm)))
+
+(defun new-mcvm () (mcvm-reset (make-mcvm)))
 
 (defun mcvm-ram-set (mcvm addr byte)
   (ram-set (mcvm-memory mcvm) addr byte))
 
-(defun mcvm-ram-get (mcvm addr byte)
+(defun mcvm-ram-get (mcvm addr)
   (ram-get (mcvm-memory mcvm) addr))
 
 (defun mcvm-load-list (mcvm byte-list)
@@ -30,12 +34,11 @@
 
 (defun mcvm-fetch-inst (vm)
   ;; grab 4 bytes starting from PC
-  (let ((ram (mcvm-memory vm))
-        (pc (mcvm-pc vm)))
-    (list (ram-get ram (+ pc 0))
-          (ram-get ram (+ pc 1))
-          (ram-get ram (+ pc 2))
-          (ram-get ram (+ pc 3)))))
+  (let ((pc (mcvm-pc vm)))    
+    (list (mcvm-ram-get vm (+ pc 0))
+          (mcvm-ram-get vm (+ pc 1))
+          (mcvm-ram-get vm (+ pc 2))
+          (mcvm-ram-get vm (+ pc 3)))))
 
 (defun mcvm-set-reg (mcvm reg val)
   (check-type reg number)
