@@ -1,5 +1,10 @@
 (in-package #:regmach4wasm)
 
+(defun expected (exp got)
+  (if (eq exp got)
+      'PASS
+      (break (format nil "test error: expecting ~a, got: ~a" exp got))))
+
 (defun zip (xs ys)
   (if (or (null xs) (null ys))
       (list)
@@ -10,10 +15,10 @@
 (defun check-number (expr)
   (check-type expr number)
   (when (< expr -128)
-    (format nil "expression results must fit within one byte; interpreted ~
-                 as signed integer, ~a is too negative."  expr))
+    (error (format nil "expression results must fit within one byte; interpreted ~
+                 as signed integer, ~a is too negative."  expr)))
   (when (> expr 255)
-    (format nil "expression results must fit within one byte, ~a is too large." expr))
+    (error (format nil "expression results must fit within one byte, ~a is too large." expr)))
   expr)
 
 (defun 32-bit-hex-helper (keystring)
