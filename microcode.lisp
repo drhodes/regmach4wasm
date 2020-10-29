@@ -82,7 +82,7 @@
         (val (caddr expr)))
     (check-type name symbol)
     ;; need a symbol table   
-    (symbol-table-put env name (eval-mc vm env val))))
+    (env-put env name (eval-mc vm env val))))
 
 (defun eval-op (vm env op inst)
   (apply op (mapcar (lambda (expr) (eval-mc vm env expr))
@@ -111,7 +111,7 @@
       (error "instruction pattern mismatch, wrong numbers of instruction values"))
     
     ;; bind the instruction values to register names.
-    (mapcar (lambda (pair) (symbol-table-put env (car pair) (cadr pair)))
+    (mapcar (lambda (pair) (env-put env (car pair) (cadr pair)))
             (zip register-names values))
     
     ;; run the microcode
