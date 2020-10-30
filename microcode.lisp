@@ -11,29 +11,39 @@
   (memory (make-ram)))
 
 (defun mcvm-reset (mcvm)
+  "reset the microcode vm"
   (setf (mcvm-regfile mcvm) (make-regfile))
   (setf (mcvm-pc mcvm) 0)
   (setf (mcvm-memory mcvm) (make-ram))
   mcvm)
 
-(defun mcvm-fmt-ram (mcvm) (ram-fmt (mcvm-memory mcvm)))
+(defun mcvm-fmt-ram (mcvm)
+  "return a formatted string representation of the microcode vm"
+  (ram-fmt (mcvm-memory mcvm)))
 
-(defun mcvm-ram-size (mcvm)  
+(defun mcvm-ram-size (mcvm)
+  "return the size of the vm ram measured in bytes"
   (ram-size (mcvm-memory mcvm)))
 
-(defun new-mcvm () (mcvm-reset (make-mcvm)))
+(defun new-mcvm ()
+  "allocate and initialize a new microcode vm"
+  (mcvm-reset (make-mcvm)))
 
 (defun mcvm-ram-set (mcvm addr byte)
+  "set one byte at a byte address in ram"
+  (check-type addr number)  
   (ram-set (mcvm-memory mcvm) addr byte))
 
 (defun mcvm-ram-get (mcvm addr)
+  "get on byte from memory"
   (ram-get (mcvm-memory mcvm) addr))
 
 (defun mcvm-load-list (mcvm byte-list)
+  "load a list of bytes into ram starting from address 0"
   (ram-load-list (mcvm-memory mcvm) byte-list))
 
 (defun mcvm-fetch-inst (vm)
-  ;; grab 4 bytes starting from PC
+  "fetch a 32-bit word starting from PC"
   (let ((pc (mcvm-pc vm)))    
     (list (mcvm-ram-get vm (+ pc 0))
           (mcvm-ram-get vm (+ pc 1))
@@ -165,11 +175,10 @@
         ((symbolp expr) (env-get env expr))
         (t (error (format nil "unhandled case in eval-mc: ~a" expr)))))
 
-
-
-
-
 (defun eval-mc-prog (vm prog)
+  (check-type vm mcvm)
+  (check-type prog list)
+  
   (let ((env (make-environment)))
     (progn (mapcar (lambda (stmt) (eval-mc vm env stmt)) prog)
            vm)))
