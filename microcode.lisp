@@ -124,8 +124,6 @@
 (defun eval-sign-extend (vm env expr)
   (sign-extend-16 (eval-mc vm env (cadr expr))))
 
-
-;;(defun eval-current-instruction (vm) (- (mcvm-pc vm) 4))
 (defun eval-current-instruction (vm) (mcvm-pc vm))
 
 (defun eval-if (vm env expr)
@@ -140,13 +138,11 @@
   (eq (eval-mc vm env (cadr expr))
       (eval-mc vm env (caddr expr))))
 
-
 (defun eval-mc (vm env expr)
   (check-type env environment)
   (check-type vm mcvm)
   (format t "eval-mc: ~a ~%" expr)
   (cond ((numberp expr) expr) 
-        ;;((match-instruction? expr) (eval-instruction vm env expr))
         ((listp expr) (case (car expr)
                         (break (break)) ;; how to add break to an interpreter. 
                         (+ (eval-op vm env #'+ expr))

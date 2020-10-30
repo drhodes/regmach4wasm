@@ -67,10 +67,9 @@
                (% CC #x10000))))
 
     (defmacro BETABR (OP RA RC LABEL) (betaopc OP RA (- (>> (- LABEL $) 2) 1) RC))
-
     
-    (defmacro ADD (RA RB RC) (betaop #x20 ra rb rc))
-    (defmacro ADDC (RA C RC)   (betaopc #x30 RA C RC))
+    (defmacro ADD (RA RB RC)     (betaop #x20 ra rb rc))
+    (defmacro ADDC (RA C RC)     (betaopc #x30 RA C RC))
 
     (defmacro AND (RA RB RC)     (betaop #x28 RA RB RC))
     (defmacro ANDC (RA C RC)     (betaopc #x38 RA C RC))

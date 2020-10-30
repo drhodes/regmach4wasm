@@ -13,7 +13,6 @@
 
 ;; https://d37djvu3ytnwxt.cloudfront.net/assets/courseware/v1/a31badb240163a3d3e3f1573af782c79/asset-v1:MITx+6.004.2x_2+3T2016+type@asset+block/pdfs_course_beta.pdf
 
-
 (defstruct instruction pattern layout opcode description microcode)
 
 (defvar *instructions* (make-hash-table))
@@ -83,10 +82,7 @@
                   to 32 bits and added to the updated PC to form the
                   target address."
                  
-                 '(
-                   ;; The literal has already been computed by the assembler!
-                   ;;(set-var delta (- (/ (- (sign-extend literal) current-instruction) 4) 1))
-                   (inc-pc)                   
+                 '((inc-pc)                   
                    (set-var effective-address (+ pc (* 4 (sign-extend literal))))
                    (set-var temp (reg ra)) ;; temp is needed here
                                            ;; because ra will get
@@ -109,7 +105,6 @@
                   32 bits and added to the updated PC to form the
                   target address"
                  
-                 ;;(set-var diff (- (/ (- (offset literal) (offset current-instruction)) 4) 1))
                  '((inc-pc)
                    (set-var effective-address (+ pc (* 4 (sign-extend diff))))
                    (set-var temp (reg ra))
@@ -218,44 +213,4 @@
         ;;(- n)
         ;; else this is a positive number.
         n)))
-
-
-(sign-extend-16 #xFFFE)
-
-
-
-(lognot (+ 1 (- 65536 #xFFFE)))
-
-
-
-(lognot #b11111110)
-
-;; CMPEQ
-;; CMPLE
-;; CMPLT
-;; DIV
-;; MUL
-;; OR
-;; SHL
-;; SHR
-;; SRA
-;; SUB
-;; XOR
-;; XNOR
-
-;; OPC
-;; ADDC
-;; ANDC
-;; CMPEQC
-;; CMPLEC
-;; CMPLTC
-;; DIVC
-;; MULC
-;; ORC
-;; SHLC
-;; SHRC
-;; SRAC
-;; SUBC
-;; XORC
-;; XNORC 
 
