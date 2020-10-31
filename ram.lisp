@@ -2,7 +2,7 @@
 (declaim (optimize (debug 3))) 
 
 ;; (defparameter size-of-ram #x800000) ;; 8 MB.
-(defparameter size-of-ram #x40)
+(defparameter size-of-ram #x800)
 
 (defstruct ram (bytes (make-array size-of-ram :element-type '(unsigned-byte 8))))
 
