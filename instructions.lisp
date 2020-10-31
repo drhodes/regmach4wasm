@@ -60,7 +60,7 @@
                   Rc."
                  
                  '((inc-pc)
-                   (set-reg rc (bit-and (reg ra) (reg rb)))))
+                   (set-reg rc (bitwise-and (reg ra) (reg rb)))))
 
 (add-instruction '(ANDC RA literal RC) 'OPC #b101000
                  "This performs the bitwise boolean AND function
@@ -68,9 +68,10 @@
                   result is written to register Rc."
 
                  '((inc-pc)
-                   (set-reg rc (bit-and (reg ra) (sign-extend rb)))))
+                   (set-reg rc (bitwise-and (reg ra) (sign-extend rb)))))
 
-(add-instruction '(BEQ RA literal RC) 'OPC #b011100                 
+(add-instruction '(BEQ RA literal RC) 'OPC #b011100
+                 ;; BEQ(Ra,label,Rc)
                  "The PC of the instruction following the BEQ
                   instruction (the updated PC) is written to register
                   Rc. If the contents of register Ra are zero then the
@@ -106,11 +107,12 @@
                   target address"
                  
                  '((inc-pc)
-                   (set-var effective-address (+ pc (* 4 (sign-extend diff))))
+                   (set-var effective-address (+ pc (* 4 (sign-extend literal))))
                    (set-var temp (reg ra))
                    (set-reg rc pc)
                    (if (not (eq temp 0))
-                       (set pc ea))))
+                       (set-pc effective-address)
+                       nop)))
 
 (add-instruction '(CMPEQ RA RB RC) 'OP #b100100 
                  "If the contents of register RA are equal to the
@@ -237,16 +239,16 @@
                   the product are written to Rc."
 
                  '((inc-pc)
-                   (set-reg (* (reg ra) (reg rb)))))
+                   (set-reg rc (* (reg ra) (reg rb)))))
 
 
-(add-instruction '(MULC RA literal RC) 'OP #b110010
+(add-instruction '(MULC RA literal RC) 'OPC #b110010
                  "The contents of register Ra are multiplied by
                   literal and the low-order 32 bits of the product are
                   written to Rc."
                  
                  '((inc-pc)
-                   (set-reg (* (reg ra) (sign-extend literal)))))
+                   (set-reg rc (* (reg ra) (sign-extend literal)))))
 
 
 (add-instruction '(OR RA RB RC) 'OP #b101001
@@ -265,7 +267,6 @@
                  
                  '((inc-pc)
                    (set-reg rc (bitwise-or (reg ra) (sign-extent literal)))))
-
 
 (defun select-bits (byte-list hi-bit lo-bit)  
   (destructuring-bind (b0 b1 b2 b3) byte-list
