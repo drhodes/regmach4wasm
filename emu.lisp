@@ -135,12 +135,95 @@ bytes in indexed from low to high, and an instruction object."
   (expected 0 (emu-pc em))
   )
 
+(emu-test-reg '((cmove 1 r0)
+                (or r0 r0 r0)
+                (or r0 r0 r0))
+              3 0 1)
 
-(setf test-emu (emu-load '(:start
-                           (addc r0 start r0)
-                           (add r0 r0 r0))))
+(emu-test-reg '((cmove 0 r0)
+                (cmove 1234 r1)
+                (or r0 r1 r0))
+              3 0 1234)
 
-(emu-step test-emu)
+(emu-test-reg '((cmove 0 r0)
+                (cmove 1234 r1)
+                (and r0 r1 r0))
+              3 0 0)
+
+
+(emu-test-reg
+ '((cmove 0 r0)
+   (cmove 1234 r1)
+   (and r0 r1 r0))
+ 3 0 0)
+
+(emu-test-reg
+ ;; count down from 10 in R0, count up to 10 in R2
+ '((cmove 10 r0)
+   (cmove 0 r2)
+   
+   :loop 
+   (addc r0 -1 r0)
+   (addc r2 1 r2)
+   (bt r0 :loop)                        ; if r0 > 0 goto loop.
+   
+   :done
+   ;; after 32 cycles register 2 should contain 10
+   )
+ 32 2 10)
+
+'(emu-test-reg
+  ;; not working.
+ '(;;;; design problem: bubble sort  
+   (br :step1)
+   
+   :A
+   (long 10) (long 56) (long 27) (long 69) (long 73) (long 99)
+   (long 44) (long 36) (long 10) (long 72) (long 71) (long 1)
+
+   (set swapped r1)
+   (set i r2)
+   (set cur r3)
+   (set prev r4)
+   (set tmp r5)
+   (set idx r6)
+   
+   ;; -------------------------------------------------------
+   :step1
+   (cmove 0 swapped)
+
+   ;; -------------------------------------------------------
+   :step2
+   (cmove 0 i)
+
+   ;; -------------------------------------------------------
+   :step3
+   (addc i 1 i)
+   (cmpltc i 12 tmp)
+   (bf tmp :step5)
+   
+   ;; -------------------------------------------------------
+   :step4
+   (mulc i 4 idx)
+   (ld idx (- a 4) prev)
+   (ld idx a cur)
+   (cmple prev cur tmp)
+   (bt tmp :step3)
+
+   (st prev a idx)
+   (st cur (- a 4) idx)
+
+   (cmove 1 swapped)
+   (br :step3)
+   
+   ;; -------------------------------------------------------
+   :step5
+   (bt swapped :step1)
+
+   (halt)
+   ;; end bubble sort
+   )
+ 5 2 1)
 
 
  
