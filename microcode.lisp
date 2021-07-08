@@ -34,8 +34,28 @@
   (check-type addr number)  
   (ram-set (mcvm-memory mcvm) addr byte))
 
+(defun mcvm-ram-set-word! (mcvm word-addr word)
+  "set one word at a word address in ram"
+  (check-type word-addr number)  
+  (check-type word number)
+  (assert (eq 0 (mod word-addr 4)))
+  (ram-set (mcvm-memory mcvm) (+ 0 word-addr) (logand word #x000000FF))
+  (ram-set (mcvm-memory mcvm) (+ 1 word-addr) (ash (logand word #x0000FF00) -8))
+  (ram-set (mcvm-memory mcvm) (+ 2 word-addr) (ash (logand word #x00FF0000) -16))
+  (ram-set (mcvm-memory mcvm) (+ 3 word-addr) (ash (logand word #xFF000000) -24))
+  mcvm)
+
+(defun mcvm-ram-get-word (mcvm word-addr)
+  "set one word at a word address in ram"
+  (check-type word-addr number)  
+  (assert (eq 0 (mod word-addr 4)))
+  (logior (ram-get (mcvm-memory mcvm) (+ 0 word-addr))
+          (ash (ram-get (mcvm-memory mcvm) (+ 1 word-addr)) 8)
+          (ash (ram-get (mcvm-memory mcvm) (+ 2 word-addr)) 16)
+          (ash (ram-get (mcvm-memory mcvm) (+ 3 word-addr)) 24)))
+
 (defun mcvm-ram-get (mcvm addr)
-  "get on byte from memory"
+  "get one byte from memory"
   (ram-get (mcvm-memory mcvm) addr))
 
 (defun mcvm-load-list (mcvm byte-list)
@@ -55,7 +75,10 @@
   (regfile-set-reg (mcvm-regfile mcvm) reg val))
 
 (defun mcvm-get-reg (mcvm reg)
-  (regfile-get-reg (mcvm-regfile mcvm) reg))
+  (if (= reg 31) 0
+      (let ((val (regfile-get-reg (mcvm-regfile mcvm) reg)))
+        (format t "mcvm-get-reg: ~a: ~a ~%" reg val)
+        val)))
 
 ;; -----------------------------------------------------------------------------
 ;; microcode language
@@ -85,6 +108,17 @@
         (val (caddr inst)))
     (mcvm-set-reg vm reg (eval-mc vm env val))))
 
+(defun eval-set-mem (vm env inst)
+  (let ((word-addr (eval-mc vm env (cadr inst)))
+        (val (caddr inst)))
+    (assert (eq 0 (mod word-addr 4)))
+    (mcvm-ram-set-word! vm word-addr (eval-mc vm env val))))
+
+(defun eval-get-mem (vm env inst)
+  (let ((word-addr (eval-mc vm env (cadr inst))))
+    (assert (eq 0 (mod word-addr 4)))
+    (mcvm-ram-get-word vm word-addr)))
+
 (defun instruction-arguments (inst) (cdr inst))
 
 (defun eval-set-var (vm env expr)
@@ -98,15 +132,17 @@
   (apply op (mapcar (lambda (expr) (eval-mc vm env expr))
                     (instruction-arguments inst))))
 
-(defun register-p (reg)
-  (if (member reg int-registers) t nil)) ;; return bool
+;; (defun register-p (reg)
+;;   (if (member reg int-registers) t nil)) ;; return bool
 
 (defun eval-inc-pc (vm env)
   (eval-mc vm env '(set-pc (+ pc 4))))
 
 (defun eval-get-pc (vm) (mcvm-pc vm))
 
-(defun eval-instruction (vm env expr)
+(defun eval-instruction (vm env expr) (break "this should not be called"))
+
+'(defun eval-instruction (vm env expr)
   ;; expr is an instruction in this form (ADD r1 r2 r3)
   ;; grab the instruction opcode
   (let* ((opcode (car expr))
@@ -128,8 +164,9 @@
     (mapcar (lambda (stmt) (eval-mc vm env stmt))
             (bind-vars env microcode))))
 
-(defun eval-get-reg (vm expr)  
-  (mcvm-get-reg vm (cadr expr)))
+(defun eval-get-reg (vm expr)
+  (if (= expr 31) 0
+      (mcvm-get-reg vm (cadr expr))))
 
 (defun eval-sign-extend (vm env expr)
   (sign-extend-16 (eval-mc vm env (cadr expr))))
@@ -148,16 +185,13 @@
   (eq (eval-mc vm env (cadr expr))
       (eval-mc vm env (caddr expr))))
 
-(defun arg1 (expr) (cadr expr))
-(defun arg2 (expr) (caddr expr))
-
 (defun eval-not (vm env expr)
-  (not (eval-mc vm env (arg1 expr))))
+  (not (eval-mc vm env (cadr expr))))
 
 (defun eval-mc (vm env expr)
   (check-type env environment)
   (check-type vm mcvm)
-  ;;(format t "eval-mc: ~a ~%" expr)
+  (format t "eval-mc: ~a ~%" expr)
   (cond ((numberp expr) expr) 
         ((listp expr) (case (car expr)
                         (break (break)) ;; how to add break to an interpreter. 
@@ -173,12 +207,13 @@
                         (set-pc (eval-set-pc vm env expr))
                         (set-var (eval-set-var vm env expr))
                         (set-reg (eval-set-reg vm env expr))
+                        (set-mem (eval-set-mem vm env expr))
+                        (mem (eval-get-mem vm env expr))
                         (not (eval-not vm env expr))
                         (reg (eval-get-reg vm expr))
                         (sign-extend (eval-sign-extend vm env expr))
                         (if (eval-if vm env expr))
                         (eq (eval-eq vm env expr))
-                        ;(bitwise-or (eval-bitwise-or vm env expr))
                         (otherwise (error (format nil "unhandled case in eval-mc: ~a" expr)))))
         ((eq 'current-instruction expr) (eval-current-instruction vm))
         ((eq 'pc expr) (eval-get-pc vm))
@@ -206,64 +241,73 @@
 
 (eval-mc-prog-with
  '((set-pc 42))
- (lambda (vm)
-   (expected 42 (mcvm-pc vm))))
+ (lambda (vm) (expected 42 (mcvm-pc vm))))
 
 (eval-mc-prog-with
  '((inc-pc))
- (lambda (vm)
-   (expected 4 (mcvm-pc vm))))
+ (lambda (vm) (expected 4 (mcvm-pc vm))))
 
 (eval-mc-prog-with
  '((set-reg 0 42))
- (lambda (vm)
-   (expected 42 (mcvm-get-reg vm 0))))
+ (lambda (vm) (expected 42 (mcvm-get-reg vm 0))))
+
+(eval-mc-prog-with
+ '((set-mem 0 123)
+   (set-reg 0 (mem 0)))
+ (lambda (vm) (expected 123 (mcvm-get-reg vm 0))))
+
+(eval-mc-prog-with
+ '((set-mem 8 123)
+   (set-reg 0 (mem 8)))
+ (lambda (vm) (expected 123 (mcvm-get-reg vm 0))))
 
 (eval-mc-prog-with
  '((set-var temp 42)
    (set-reg 0 temp))
- (lambda (vm)
-   (expected 42 (mcvm-get-reg vm 0))))
+ (lambda (vm) (expected 42 (mcvm-get-reg vm 0))))
 
 (eval-mc-prog-with
  '((if (eq 0 0) 
        (set-reg 0 1)
        (set-reg 0 0)))
- (lambda (vm)
-   (expected 1 (mcvm-get-reg vm 0))))
+ (lambda (vm) (expected 1 (mcvm-get-reg vm 0))))
 
 (eval-mc-prog-with
  '((set-var temp 42)
    (if (eq temp 42) 
        (set-reg 0 1)
        (set-reg 0 0)))
- (lambda (vm)
-   (expected 1 (mcvm-get-reg vm 0))))
+ (lambda (vm) (expected 1 (mcvm-get-reg vm 0))))
 
 (eval-mc-prog-with
  '((set-var temp 42)
    (if (eq temp temp) 
        (set-reg 0 1)
        (set-reg 0 0)))
- (lambda (vm)
-   (expected 1 (mcvm-get-reg vm 0))))
+ (lambda (vm) (expected 1 (mcvm-get-reg vm 0))))
 
 (eval-mc-prog-with
  '((set-var temp 41)
    (if (eq temp 42) 
        (set-reg 0 1)
        (set-reg 0 0)))
- (lambda (vm)
-   (expected 0 (mcvm-get-reg vm 0))))
+ (lambda (vm) (expected 0 (mcvm-get-reg vm 0))))
+
+(eval-mc-prog-with
+ '((set-var temp 41)
+   (if (eq temp 42) 
+       (set-reg 4 123)
+       (set-reg 4 121)))
+ (lambda (vm) (expected 121 (mcvm-get-reg vm 4))))
 
 (eval-mc-prog-with
  '((set-reg 0 (sign-extend 65535)))
- (lambda (vm)
-   (expected -1 (mcvm-get-reg vm 0))))
+ (lambda (vm) (expected -1 (mcvm-get-reg vm 0))))
 
 (defun eval-with-expect-r0 (value program)
-  (eval-mc-prog-with program (lambda (vm)
-                               (expected value (mcvm-get-reg vm 0)))))
+  (eval-mc-prog-with program
+                     (lambda (vm)
+                       (expected value (mcvm-get-reg vm 0)))))
 
 (eval-with-expect-r0 -1
                      '((set-reg 0 (sign-extend 65535))))

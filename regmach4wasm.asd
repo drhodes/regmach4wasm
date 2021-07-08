@@ -13,9 +13,9 @@
                (:file "symbol-table")
                (:file "env")
                (:file "macro")
-               (:file "beta") ;; this contains macrodefs for beta.uasm
                (:file "ram")
-               (:file "assembler") 
+               (:file "beta") ;; this contains macrodefs for beta.uasm
+               (:file "assembler")  
                (:file "instructions")
                (:file "regfile")
                (:file "microcode")

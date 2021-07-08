@@ -4,8 +4,7 @@
   (assemble-with-beta
    ;; -----------------------------------------------------------------------------
    ;; tiny-os
-   '(
-                                      
+   '(                                     
      (set $ vec-reset)          (br i-reset) ;; on reset (start-up)
      (set $ vec-ii)             (br i-illop) ;; on illegal instruct (eg SVC)
      (set $ vec-segfault)       (br i-segfault) ;; on segmentation fault (user-mode addr > bounds)
@@ -23,13 +22,15 @@
      :user-m-state (storage 32)
 
      (defmacro ss (R) (st r (+ user-m-state (* 4 r))))
+     
      (defmacro save-state ()
        (ss 00) (ss 01) (ss 02) (ss 03) (ss 04) (ss 05) (ss 06) (ss 07)
        (ss 08) (ss 09) (ss 10) (ss 11) (ss 12) (ss 13) (ss 14) (ss 15)
        (ss 16) (ss 17) (ss 18) (ss 19) (ss 20) (ss 21) (ss 22) (ss 23)
        (ss 24) (ss 25) (ss 26) (ss 27) (ss 28) (ss 29) (ss 30))
-
+     
      (defmacro rs (r) (ld (+ user-m-state (* 4 r)) r))
+     
      (defmacro restore-state ()
        (rs 00) (rs 01) (rs 02) (rs 03) (rs 04) (rs 05) (rs 06) (rs 07)
        (rs 08) (rs 09) (rs 10) (rs 11) (rs 12) (rs 13) (rs 14) (rs 15)
@@ -79,7 +80,6 @@
      (ld r0 :uuo-table r0)     ; fetch uuo-table[opcode]
      (jmp r0)                  ; and dispatch to the UUO handler
 
-
      (defmacro uuo (addr) (long (+ addr pc-supervisor))) ; auxilary macros
      (defmacro bad () (uuo :uuo-error))
 
@@ -104,7 +104,6 @@
      (bad)        (bad)         (bad)        (bad)
      (bad)        (bad)         (bad)        (bad)
 
-
      ;; here's the handler for truly unused opcodes (not SVCs):
      :uuo-error
      (call :kernel-write-msg)           ; type out an error msg.
@@ -118,7 +117,6 @@
      (call :kernel-write-msg)
      (.text "! .....")
      (halt)                             ; then crash system.
-
      
      ;; here's the common exit sequence from kernel interrupt
      ;; handlers: Restore registers, and jump back to the interrupted
@@ -322,14 +320,8 @@
      (ld k-stack sp)
      (call scheduler)
      (br i-rtn)
-
-
-
      
      ;; end of tiny-os
-
-
-
      )))
 
 

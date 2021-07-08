@@ -7,8 +7,7 @@
 ;;
 
 (defparameter beta.uasm
-  '(
-    (set r0 0)
+  '((set r0 0)
     (set r1 1)
     (set r2 2)
     (set r3 3)

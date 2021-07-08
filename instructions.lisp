@@ -56,7 +56,7 @@
 (add-instruction '(AND RA RB RC) 'OP #b101000
                  "This performs the bitwise boolean AND function
                   between the contents of register Ra and the contents
-                  of register Rb.  The result is written to register
+                  of register Rb. The result is written to register
                   Rc."
                  
                  '((inc-pc)
@@ -66,7 +66,7 @@
                  "This performs the bitwise boolean AND function
                   between the contents of register Ra and literal. The
                   result is written to register Rc."
-
+                 
                  '((inc-pc)
                    (set-reg rc (bitwise-and (reg ra) (sign-extend rb)))))
 
@@ -139,7 +139,7 @@
                   equal to the contents of register RB then 1 is
                   written to register RC - otherwise zero is written
                   to RC"
-
+                 
                  '((inc-pc)
                    (if (<= (reg ra) (reg rb))
                        (set-reg rc 1)
@@ -150,7 +150,7 @@
                   equal to literal - the value one is written to
                   register RC then otherwise 0 is written to RC"
                  
-                  '((inc-pc)
+                 '((inc-pc)
                    (if (<= (reg ra) (sign-extend literal))
                        (set-reg rc 1)
                        (set-reg rc 0))))
@@ -209,7 +209,7 @@
                    (set-reg rc pc)
                    (set-pc effective-address)))
 
-(add-instruction '(LD RA literal RC) 'OP-LD #b011000
+(add-instruction '(LD RA literal RC) 'OPC #b011000
                  "The effective address EA is computed by adding the
                   contents of register Ra to the signextended 16-bit
                   displacement literal. The location in memory
@@ -217,9 +217,9 @@
 
                  '((inc-pc)
                    (set-var effective-address (+ (reg ra) (sign-extend literal)))
-                   (set-reg rc (get-mem effective-address))))
+                   (set-reg rc (mem effective-address))))
 
-(add-instruction '(LDR label RC) 'OP-LDR #b011111
+(add-instruction '(LDR literal RC) 'OP-LDR #b011111
                  "The effective address EA is computed by multiplying
                   the sign-extended literal by 4 (to convert it to a
                   byte offset) and adding it to the updated PC. The
@@ -231,7 +231,7 @@
                  
                  '((inc-pc)
                    (set-var effective-address (+ pc (* 4 (sign-extend literal))))
-                   (set-reg rc (mem-fetch effective-address))))
+                   (set-reg rc (mem effective-address))))
 
 (add-instruction '(MUL RA RB RC) 'OP #b100010
                  "The contents of register Ra are multiplied by the
@@ -241,7 +241,6 @@
                  '((inc-pc)
                    (set-reg rc (* (reg ra) (reg rb)))))
 
-
 (add-instruction '(MULC RA literal RC) 'OPC #b110010
                  "The contents of register Ra are multiplied by
                   literal and the low-order 32 bits of the product are
@@ -249,7 +248,6 @@
                  
                  '((inc-pc)
                    (set-reg rc (* (reg ra) (sign-extend literal)))))
-
 
 (add-instruction '(OR RA RB RC) 'OP #b101001
                  "This performs the bitwise boolean OR function
@@ -259,14 +257,26 @@
                  
                  '((inc-pc)
                    (set-reg rc (bitwise-or (reg ra) (reg rb)))))
-
+ 
 (add-instruction '(ORC RA literal RC) 'OP #b111001
                  "This performs the bitwise boolean OR function
                   between the contents of register Ra and literal. The
                   result is written to register Rc."
+                 '((inc-pc)
+                   (set-reg rc (bitwise-or (reg ra) (sign-extend literal)))))
+
+(add-instruction '(ST RA literal RC) 'OPC #b011001
+                 "The effective address EA is computed by adding the
+                  contents of register Ra to the signextended 16-bit
+                  displacement literal. The contents of register Rc
+                  are then written to the location in memory specified
+                  by EA."
                  
                  '((inc-pc)
-                   (set-reg rc (bitwise-or (reg ra) (sign-extent literal)))))
+                   (set-var ea (+ (reg ra) (sign-extend literal)))
+                   (set-mem ea (reg rc))))
+
+
 
 (defun select-bits (byte-list hi-bit lo-bit)  
   (destructuring-bind (b0 b1 b2 b3) byte-list
@@ -291,6 +301,7 @@
 ;;(select-bits  '(254 255 0 112) 15 0)
 
 (defun sign-extend-16 (n)
+  (check-type n integer)
   "Sign-extend means something different for an emulator because
    arithmetic routines are being carried out on the host hardware. So,
    we just need a negative number if the 16 bit version is negative.

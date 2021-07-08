@@ -1,7 +1,6 @@
 (in-package #:regmach4wasm)
 (declaim (optimize (debug 3))) 
 
-
 (defstruct assembly env byte-list)
 
 (defun comment (x) (list 'comment x))
@@ -117,8 +116,6 @@
         (set-cur-byte-addr env val)
         (env-put env sym (asm-eval-expr env val (cur-byte-addr env))))))
 
-
-
 (defun match-set-current-byte? (item)
   (and (listp item)
        (> (length item) 2) 
@@ -182,16 +179,6 @@
            (result5 (mapcar #'fix-neg-byte result4))
            )      
       (make-assembly :env env :byte-list result5))))
-
-'(progn
-  ;; failing
-  ;;
-
-  ;; end progn
-  )
-
-
-
 
 (defun fix-neg-byte (n)
   ;; adhere to 6.004x 
@@ -271,6 +258,7 @@
   (test-assemble-code (append beta.uasm code) exp))
 
 
+
 (progn
   ;; passing
   (test-assemble-beta '($ $ $
@@ -340,7 +328,6 @@
   (test-assemble-beta '((<< 1 3)) (hexs :00000008))
   (test-assemble-beta '((<< 1 4)) (hexs :00000010))
 
-
   (test-assemble-beta '((betaopc 0 0 0 0)) (hexs :00000000))
   (test-assemble-beta '((betaopc 1 0 0 0)) (hexs :04000000))
   (test-assemble-beta '((betaopc 0 1 0 0)) (hexs :00010000))
@@ -367,7 +354,6 @@
                                       :00000000 :00000000 :00000000 :00000000
                                       :00000000 :00000000 :00000000 :00000000
                                       :00000000))
-
   
   (test-assemble-beta '($ $ (add 0 0 0) $ $ 0 0) (hexs :00000100 :80000000 :00000908))
   (test-assemble-beta '((reserve 2) $ $ $ $) (hexs :00000000 :00000000 :0b0a0908))
@@ -386,19 +372,13 @@
 
   (test-assemble-beta '((long 123456)) (hexs :0001e240))
   (test-assemble-beta '((long 123456) $ $ $ $) (hexs :0001e240 :07060504))
-
-
-  
   (test-assemble-beta '((set x 2) (set y 3) (+ x y)) '(5 0 0 0))
-  
   (test-assemble-beta '((ADD 1 2 3) (SUB 2 3 4) (ADD 4 5 6))
                       (hexs :80611000 :84821800 :80c42800))
-  
   (test-assemble-beta '((defmacro wrap (x) x x) (wrap 1) $ $) (hexs :03020101))
   (test-assemble-beta '((ADD 0 0 0) $) (list 0 0 0 128 4 0 0 0))
   (test-assemble-beta '((ADD $ $ $) (ADD $ $ $)) (list 0 0 0 #x80 0 #x20 #x84 #x80)) 
   (test-assemble-beta '($ $ $ $) (hexs :03020100))
-  
   (test-assemble-beta '((ADD $ $ $)) '(0 0 0 #x80))
   (test-assemble-beta '((betabr 1 2 3 4)) (list #x00 #x00 #x62 #x04)) 
   (test-assemble-beta '((betabr 0 0 0 4)) '(0 0 0 0))
@@ -406,30 +386,21 @@
   (test-assemble-beta '((>> 1 0) (>> 1 1) (>> 1 2) (>> 1 3)
                         (<< 1 0) (<< 1 1) (<< 1 2) (<< 1 3))
                       '(1 0 0 0 1 2 4 8))
-  
   (test-assemble-beta '(0 0 0 $) (list 0 0 0 3))
-  
   (test-assemble-beta '((defmacro wrap (x) x) (wrap 1) $) '(1 1 0 0))
-  
   (test-assemble-beta '((defmacro wrap (x) x x) $) '(0 0 0 0))
   (test-assemble-beta '((set $ 5) $) '(0 0 0 0 0 5 0 0))
   (test-assemble-beta '((+ 1 1) $) '(2 1 0 0))
-  
-
   (test-assemble-code '(1 (.align 5) 2) '(1 0 0 0 0 2 0 0))
   (test-assemble-code '(1 (.align) 2) '(1 0 0 0 2 0 0 0))
   (test-assemble-beta '((set $ (+ $ 8)) $) '(0 0 0 0 0 0 0 0 8 0 0 0))
-
   (test-assemble-beta '($ 1 2 $) '(0 1 2 3))
-  
   (test-assemble-beta '((add r1 2 3)) (hexs :80611000))
   (test-assemble-beta '(:start (add r1 r2 :start)) (hexs :80011000))
   (test-assemble-beta '(0 :start (add r1 r2 :start)) (hexs :00000000 :80211000))
   (test-assemble-beta '((BEQ 1 2)) (hexs :73e1ffff))
-
   (test-assemble-beta '((+ $ $)) '(0 0 0 0)) 
   (test-assemble-beta '((set $ 10) (+ $ $)) '(0 0 0 0 0 0 0 0 0 0 20 0))
-  
   (test-assemble-beta '((betabr 0 0 0 0)) '(#xff #xff #x00 #x00))
   (test-assemble-beta '((betabr 0 0 4 0)) '(#xFF #xFF #x80 #x00))
   (test-assemble-beta '((betabr 0 4 0 0)) '(#xFF #xFF #x04 #x00))
@@ -472,7 +443,6 @@
   (test-assemble-beta '((betaopc 0 0 4 0)) '(#x04 #x00 #x00 #x00))
   (test-assemble-beta '((betaopc 0 4 0 0)) '(#x00 #x00 #x04 #x00))
   (test-assemble-beta '((betaopc 4 0 0 0)) '(#x00 #x00 #x00 #x10))
-
   (test-assemble-beta '((betaopc 4 4 4 4)) '(#x04 #x00 #x84 #x10))
   (test-assemble-beta '((betaopc 14 14 14 14)) '(#x0E #x00 #xCE #x39))
 
@@ -482,6 +452,13 @@
   (test-assemble-beta '((- (>> (- 0 $) 2) 1)) '(255 0 0 0))
   (test-assemble-beta '((betaopc 1 2 3 4)) '(#x03 #x00 #x82 #x04))
 
+  (test-assemble-beta '((br :A)
+                        (CMOVE 7 r0)
+                        (CMOVE 7 r0)
+                        :A
+                        (CMOVE :A r0))
+                      ;; this passes.
+                      (hexs :73ff0002 :c01f0007 :c01f0007 :c01f000c))
   
   )
 
