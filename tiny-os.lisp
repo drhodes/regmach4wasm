@@ -1,5 +1,8 @@
 (in-package #:regmach4wasm)
 
+;; TINYOS is from computationstructure.org and can be found here
+;; https://computationstructures.org/exercises/tinyos/lab.html
+
 (defparameter tiny-os-machine-code
   (assemble-with-beta
    ;; -----------------------------------------------------------------------------
