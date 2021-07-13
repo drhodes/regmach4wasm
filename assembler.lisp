@@ -257,8 +257,6 @@
   ;; "link" in the beta
   (test-assemble-code (append beta.uasm code) exp))
 
-
-
 (progn
   ;; passing
   (test-assemble-beta '($ $ $
@@ -298,7 +296,6 @@
   (test-assemble-beta '($ $ (beq 0 0 0) $ $ 0 0) (hexs :00000100 :7000fffe :00000908))
   (test-assemble-beta '($ $ $ $ (beq 0 0 0) $ $) (hexs :03020100 :7000fffe :00000908))
   (test-assemble-beta '($ $ $ $ (betabr 0 0 0 4)) (hexs :03020100 :0000ffff))
-
   
   (test-assemble-beta '((short 12345)) (hexs :00003039))
   (test-assemble-beta '((word 0)) (hexs :00000000)) 
@@ -312,10 +309,8 @@
   (test-assemble-code '(-2) (hexs :000000fe))
   (test-assemble-code '((- 1 2)) (hexs :000000ff))
   
-  
   (test-assemble-beta '(-1 -1) (hexs :0000ffff))
   (test-assemble-beta '((- (>> (- step $) 2) 1) :step ) (hexs :000000ff))
-
   
   (test-assemble-beta '((- (>> (- 0 $) 2) 1)) (hexs :000000ff))
   (test-assemble-beta '((BR step1) $ :step1) (hexs :73ff0000 :00000004))
@@ -351,9 +346,9 @@
   (test-assemble-beta '((BR :step1)
                         (set $ 52)
                         :step1) (hexs :73ff000c :00000000 :00000000 :00000000
-                                      :00000000 :00000000 :00000000 :00000000
-                                      :00000000 :00000000 :00000000 :00000000
-                                      :00000000))
+                        :00000000 :00000000 :00000000 :00000000
+                        :00000000 :00000000 :00000000 :00000000
+                        :00000000))
   
   (test-assemble-beta '($ $ (add 0 0 0) $ $ 0 0) (hexs :00000100 :80000000 :00000908))
   (test-assemble-beta '((reserve 2) $ $ $ $) (hexs :00000000 :00000000 :0b0a0908))
@@ -436,7 +431,6 @@
                             8)
                          256))
                       '(0 0 0 0))
-  
 
   (test-assemble-beta '((betaopc 0 0 0 0)) '(#x00 #x00 #x00 #x00))
   (test-assemble-beta '((betaopc 0 0 0 4)) '(#x00 #x00 #x80 #x00))
@@ -459,6 +453,152 @@
                         (CMOVE :A r0))
                       ;; this passes.
                       (hexs :73ff0002 :c01f0007 :c01f0007 :c01f000c))
-  
-  )
 
+  (test-assemble-beta '((push r0) (ADD r0 r0 r0))
+                      (hexs :c3bd0004 :641dfffc :80000000))
+
+  (test-assemble-beta ;; le-12-3
+   ;; 
+   '(
+     :ones
+     (push lp)
+     (push bp)
+     (move sp bp)
+     (allocate 2)
+     (push r1)
+     (ld bp -12 r0)
+     (andc r0 1 r1)
+     (st r1 0 bp)
+     (shrc r0 1 r1)
+     (st r1 4 bp)
+
+     :xx
+     (BEQ R0 labl)
+
+     :zz
+     (LD BP 4 R1)
+     (PUSH R1)
+     
+     :yy
+     (BR ones LP)
+     (DEALLOCATE 1)
+     (LD BP 0 R1)
+     (ADD R1 R0 R0)
+     
+     :labl
+     (POP R1)
+     (MOVE BP SP)
+     (POP BP)
+     (POP LP)
+     (JMP LP))
+
+   (hexs :c3bd0004 :679dfffc :c3bd0004 :677dfffc :837df800 :c3bd0008
+         :c3bd0004 :643dfffc :601bfff4 :e0200001 :643b0000 :f4200001
+         :643b0004 :73e00007 :603b0004 :c3bd0004 :643dfffc :739fffee
+         :c7bd0004 :603b0000 :80010000 :603dfffc :c3bdfffc :83bbf800
+         :637dfffc :c3bdfffc :639dfffc :c3bdfffc :6ffc0000))
+  
+  (test-assemble-beta '(:label_X_0 (LONG 0) (CMOVE 4 R0) (ST R0 :label_X_0))
+                      (hexs :00000000 :c01f0004 :641f0000))
+
+  (test-assemble-beta
+   '(:f
+     (PUSH LP)
+     (PUSH BP)
+     (MOVE SP BP)
+     (ALLOCATE 1)
+     (PUSH R1)
+
+     (LD BP -12 R0)
+     (ANDC R0 5 R1)
+     (ST R1 0 BP)
+
+     :xx
+     (BEQ R0 bye)
+
+     (SUBC R0 1 R0) 
+     (PUSH R0)
+     
+     :yy
+     (BR f LP)
+     (DEALLOCATE 1)
+
+     (LD BP 0 R1)
+     (ADD R1 R0 R0)
+
+     :bye
+     (POP R1)
+     (MOVE BP SP)
+     (POP BP)
+     (POP LP)
+     (JMP LP))
+
+   (hexs :c3bd0004 :679dfffc :c3bd0004 :677dfffc
+         :837df800 :c3bd0004 :c3bd0004 :643dfffc
+         :601bfff4 :e0200005 :643b0000 :73e00007
+         :c4000001 :c3bd0004 :641dfffc :739ffff0
+         :c7bd0004 :603b0000 :80010000 :603dfffc
+         :c3bdfffc :83bbf800 :637dfffc :c3bdfffc
+         :639dfffc :c3bdfffc :6ffc0000)) 
+
+
+  
+  (test-assemble-beta
+
+   '((BR STEP1)  ;; start execution with Step 1
+
+     ;; the array to be sorted
+     :A
+     (LONG 10) (LONG 56) (LONG 27) (LONG 69) (LONG 73) (LONG 99)
+     (LONG 44) (LONG 36) (LONG 10) (LONG 72) (LONG 71) (LONG 1)
+
+     (set ALEN (/ (- $ A) 4))  ;; determine number of elements in A
+
+     ;; Please enter your code for each of the steps below...
+     (set swapped r1)
+     (set i r2)
+     (set cur r3)
+     (set prev r4)
+     (set tmp r5)
+     (set idx r6)
+
+     :STEP1
+     (CMOVE 0 swapped)
+
+     :STEP2
+     (CMOVE 0 i)
+
+     :STEP3
+     (ADDC i 1 i)
+     (CMPLTC i 12 tmp) ;; 
+     (BF tmp STEP5)
+     
+     
+     :STEP4
+     (MULC i 4 idx)
+     (LD idx (- A 4) prev)
+     (LD idx A cur)						
+     (CMPLE prev cur tmp) ;; if A[i-1] <= A[i] then tmp=1 else tmp=0
+     (BT tmp STEP3)     ;; if tmp == 1 then goto STEP3
+     
+     (ST prev A idx) 	  ;; swap A[i-1] and A[i]		
+     (ST cur (- A 4) idx)		
+     
+     (CMOVE 1 swapped)   ;; set swapped to 1
+     (BR STEP3)
+     
+     :STEP5
+
+     (BT swapped STEP1) 
+
+
+     :done
+     (HALT))
+   
+   (hexs  :73ff000c :0000000a :00000038 :0000001b :00000045 :00000049
+          :00000063 :0000002c :00000024 :0000000a :00000048 :00000047
+          :00000001 :c03f0000 :c05f0000 :c0420001 :d4a2000c :73e50009
+          :c8c20004 :60860000 :60660004 :98a41800 :77e5fff8 :64860004
+          :64660000 :c03f0001 :73fffff4 :77e1fff1 :00000000))
+
+  )
