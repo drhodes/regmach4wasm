@@ -61,9 +61,9 @@ bytes in indexed from low to high, and an instruction object."
     (emu-execute-one-instruction emu next-inst)))
 
 (defun emu-reg (emu reg)
-  (check-type reg integer)
-  (assert (>= reg 0))
-  (assert (<= reg 31))
+  ;; (check-type reg integer)
+  ;; (assert (>= reg 0))
+  ;; (assert (<= reg 31))
   (if (eq reg 31) 0
       (mcvm-get-reg (emu-microcode-vm emu) reg)))
 
@@ -81,7 +81,8 @@ bytes in indexed from low to high, and an instruction object."
       (emu-step emu))    
     (let ((result (emu-reg emu register)))
       (unless (eq result exp)
-        (expected exp result)))))
+        (expected exp result)))
+    emu))
 
 (defun emu-fmt-mem (emu)
   "format the array of memory bytes to look like a hexdump with 32 bit
@@ -121,10 +122,9 @@ bytes in indexed from low to high, and an instruction object."
                   (and r0 r1 r0))
                 3 0 11)
 
-  (emu-test-reg '() 0 31 0)
+  ;;(emu-test-reg '() 0 31 0)
   
   ;; when is 
-
   )
 
 (let ((em (emu-load '(:start
@@ -177,13 +177,6 @@ bytes in indexed from low to high, and an instruction object."
                 (and r0 r1 r0))
               3 0 0)
 
-
-(emu-test-reg
- '((cmove 0 r0)
-   (cmove 1234 r1)
-   (and r0 r1 r0))
- 3 0 0)
-
 (emu-test-reg
  ;; count down from 10 in R0, count up to 10 in R2
  '((cmove 10 r0)
@@ -207,8 +200,6 @@ bytes in indexed from low to high, and an instruction object."
  3 0 42)
 
 (emu-test-reg
- ;; this assembles correctly.
- ;; test error: expecting 12, got: 
  '((br :A)
    (cmove 7 r0)
    (cmove 7 r0)
@@ -220,8 +211,6 @@ bytes in indexed from low to high, and an instruction object."
  4 0 12)
 
 (emu-test-reg
- ;; this assembles correctly.
- ;; test error: expecting 12, got: 
  '((br :A)   
    (OR r0 r0 r0)
    (OR r0 r0 r0)
@@ -231,47 +220,7 @@ bytes in indexed from low to high, and an instruction object."
    (ADD r0 r0 r0)
    (ADD r0 r0 r0)
    )
- 5 0 8)  ;'asdf
-
-
-;; eval-mc: (INC-PC) 
-;; eval-mc: (SET-PC (+ PC 4)) 
-;; eval-mc: (+ PC 4) 
-;; eval-mc: PC 
-;; eval-mc: 4 
-;; eval-mc: 4 
-;; eval-mc: (SET-VAR EFFECTIVE-ADDRESS (+ PC (* 4 (SIGN-EXTEND 2)))) 
-;; eval-mc: (+ PC (* 4 (SIGN-EXTEND 2))) 
-;; eval-mc: PC 
-;; eval-mc: (* 4 (SIGN-EXTEND 2)) 
-;; eval-mc: 4 
-;; eval-mc: (SIGN-EXTEND 2) 
-;; eval-mc: 2 
-;; eval-mc: (SET-VAR TEMP (REG 31)) 
-;; eval-mc: (REG 31) 
-;; eval-mc: (SET-REG 31 PC) 
-;; eval-mc: PC 
-;; eval-mc: (IF (EQ TEMP 0)
-;;              (SET-PC EFFECTIVE-ADDRESS)
-;;              NOP) 
-;; eval-mc: (EQ TEMP 0) 
-;; eval-mc: TEMP 
-;; eval-mc: 0 
-;; eval-mc: (SET-PC EFFECTIVE-ADDRESS) 
-;; eval-mc: EFFECTIVE-ADDRESS 
-;; eval-mc: 12 
-;; eval-mc: (INC-PC) 
-;; eval-mc: (SET-PC (+ PC 4)) 
-;; eval-mc: (+ PC 4) 
-;; eval-mc: PC 
-;; eval-mc: 4 
-;; eval-mc: 16 
-;; eval-mc: (SET-REG 0 (+ (REG 31) (SIGN-EXTEND 12))) 
-;; eval-mc: (+ (REG 31) (SIGN-EXTEND 12)) 
-;; eval-mc: (REG 31) 
-;; eval-mc: (SIGN-EXTEND 12) 
-;; eval-mc: 12 
-
+ 5 0 8) 
 
 (emu-test-reg
  ;; this assembles correctly.
@@ -282,102 +231,156 @@ bytes in indexed from low to high, and an instruction object."
    )
  2 0 0)
 
-;; eval-mc: (INC-PC) 
-;; eval-mc: (SET-PC (+ PC 4)) 
-;; eval-mc: (+ PC 4) 
-;; eval-mc: PC 
-;; eval-mc: 4 
-;; eval-mc: 4 
-;; eval-mc: (SET-VAR EFFECTIVE-ADDRESS (+ PC (* 4 (SIGN-EXTEND 1)))) 
-;; eval-mc: (+ PC (* 4 (SIGN-EXTEND 1))) 
-;; eval-mc: PC 
-;; eval-mc: (* 4 (SIGN-EXTEND 1)) 
-;; eval-mc: 4 
-;; eval-mc: (SIGN-EXTEND 1) 
-;; eval-mc: 1 
-;; eval-mc: (SET-VAR TEMP (REG 31)) 
-;; eval-mc: (REG 31) 
-;; eval-mc: (SET-REG 31 PC) 
-;; eval-mc: PC 
-;; eval-mc: (IF (EQ TEMP 0)
-;;              (SET-PC EFFECTIVE-ADDRESS)
-;;              NOP) 
-;; eval-mc: (EQ TEMP 0) 
-;; eval-mc: TEMP 
-;; eval-mc: 0 
-;; eval-mc: (SET-PC EFFECTIVE-ADDRESS) 
-;; eval-mc: EFFECTIVE-ADDRESS 
-;; eval-mc: 8 
-;; eval-mc: (INC-PC) 
-;; eval-mc: (SET-PC (+ PC 4)) 
-;; eval-mc: (+ PC 4) 
-;; eval-mc: PC 
-;; eval-mc: 4 
-;; eval-mc: 12 
-;; eval-mc: (SET-REG 0 (+ (REG 31) (REG 31))) 
-;; eval-mc: (+ (REG 31) (REG 31)) 
-;; eval-mc: (REG 31) 
-;; eval-mc: (REG 31) 
+(emu-test-reg
+ '((push r0)
+   (ADD r0 r0 r0))
+ 1 0 0)
+
+(defparameter bubble-sort-prog
+  '((BR STEP1)  ;; start execution with Step 1
+
+    ;; the array to be sorted
+    :A
+    (LONG 10) (LONG 56) (LONG 27) (LONG 69) (LONG 73) (LONG 99)
+    (LONG 44) (LONG 36) (LONG 10) (LONG 72) (LONG 71) (LONG 1)
+
+    (set ALEN (/ (- $ A) 4))  ;; determine number of elements in A
+    
+    ;; Please enter your code for each of the steps below...
+    (set swapped r1)
+    (set i r2)
+    (set cur r3)
+    (set prev r4)
+    (set tmp r5)
+    (set idx r6)
+
+    :STEP1
+    (CMOVE 0 swapped)
+
+    :STEP2
+    (CMOVE 0 i)
+
+    :STEP3
+    (ADDC i 1 i)                        ; increment array index
+    (CMPLTC i 12 tmp)                   ; 
+    (BF tmp STEP5)
+    
+    :STEP4
+    (MULC i 4 idx)
+    (LD idx (- A 4) prev)
+    (LD idx A cur) 
+    (CMPLE prev cur tmp)  ;; if A[i-1] <= A[i] then tmp=1 else tmp=0
+    (BT tmp STEP3)        ;; if tmp == 1 then goto STEP3
+    
+    (ST prev A idx) 	  ;; swap A[i-1] and A[i] 
+    (ST cur (- A 4) idx) 
+    
+    (CMOVE 1 swapped)     ;; set swapped to 1
+    (BR STEP3)
+    
+    :STEP5
+
+    (BT swapped STEP1) 
+
+    :done
+    (HALT)))
+
+
+(emu-test-reg bubble-sort-prog 0 0 0)
+(emu-test-reg bubble-sort-prog 0 0 0)
+(emu-test-reg bubble-sort-prog 2 2 0)
+(emu-test-reg bubble-sort-prog 3 2 0)
+(emu-test-reg bubble-sort-prog 4 2 1)
+(emu-test-reg bubble-sort-prog 4 5 0)
+(emu-test-reg bubble-sort-prog 5 5 1)
+(emu-test-reg bubble-sort-prog 7 6 4)
+(emu-test-reg bubble-sort-prog 8 4 10)
+
+(defun test-bubble-sort-at-cycle (n regmap &optional emu)
+  (if (null regmap) (list 'pass emu)
+      (let* ((reg (caar regmap))
+             (val (cadar regmap))
+             (emu (emu-test-reg bubble-sort-prog n reg val)))
+        (test-bubble-sort-at-cycle n (cdr regmap) emu))))
+
+(defun test-pc-at-cycle (program n-steps exp)
+  (let ((emu (emu-load program)))
+    (loop repeat n-steps do     
+      (emu-step emu))    
+    (let ((result (emu-pc emu)))
+      (unless (eq result exp)
+        (expected exp result)))))
+
+(defun hexsymbol-to-int (s)
+  (parse-integer (format nil "~a" s) :radix 16))
+
+(defun test-pc-at-cycles (program pc-list &optional cycle)
+  "pc-list is a list of expected program counter values which signify
+what the PC should be as encountered, as the program runs one cycle as
+a time."
+  (cond
+    ((null pc-list) 'pass)
+    ((null cycle) (test-pc-at-cycles program pc-list 1))
+    (t (progn (test-pc-at-cycle program cycle (car pc-list))
+              (test-pc-at-cycles program (cdr pc-list) (+ 1 cycle))))))
+
+
+(test-pc-at-cycles bubble-sort-prog
+                   (mapcar 'hexsymbol-to-int
+                           '(34 38
+                             3c 40 44 48 4c 50 54 58
+                             3c 40 44 48 4c 50 54 58 5c 60 64 68
+                             3c 40 44 48 4c 50 54 58
+                             3c 40 44 48 4c 50 54 58
+                             3c 40 44 48 4c 50 54 58
+                             3c 40 44 48 4c 50 54 58 5c 60 64 68
+                             3c 40 44 48 4c 50 54 58 5c 60 64 68
+                             3c 40 44 48 4c 50 54 58 5c 60 64 68
+                             3c 40 44 48 4c 50 54 58 5c 60 64 68
+                             3c 40 44 48 4c 50 54 58 5c 60 64 68
+                             3c 40 44 48 4c 50 54 58 5c 60 64 68
+                             3c 40 44 6c
+                             )
+                           ))
+
+(test-bubble-sort-at-cycle 86 '((0 0) (1 1) (2 9) (3 #xa) (4 #x63) (5 1) (6 #x20) (7 0)))
+(test-bubble-sort-at-cycle 87 '((0 0) (1 1) (2 9) (3 #xa) (4 #x63) (5 1) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 88 '((0 0) (1 1) (2 9) (3 #xa) (4 #x63) (5 1) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 89 '((0 0) (1 1) (2 9) (3 #x48) (4 #x63) (5 1) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 90 '((0 0) (1 1) (2 9) (3 #x48) (4 #x63) (5 0) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 91 '((0 0) (1 1) (2 9) (3 #x48) (4 #x63) (5 0) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 92 '((0 0) (1 1) (2 9) (3 #x48) (4 #x63) (5 0) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 93 '((0 0) (1 1) (2 9) (3 #x48) (4 #x63) (5 0) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 94 '((0 0) (1 1) (2 9) (3 #x48) (4 #x63) (5 0) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 95 '((0 0) (1 1) (2 9) (3 #x48) (4 #x63) (5 0) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 96 '((0 0) (1 1) (2 #xa) (3 #x48) (4 #x63) (5 0) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 97 '((0 0) (1 1) (2 #xa) (3 #x48) (4 #x63) (5 1) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 98 '((0 0) (1 1) (2 #xa) (3 #x48) (4 #x63) (5 1) (6 #x24) (7 0)))
+(test-bubble-sort-at-cycle 99 '((0 0) (1 1) (2 #xa) (3 #x48) (4 #x63) (5 1) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 100 '((0 0) (1 1) (2 #xa) (3 #x48) (4 #x63) (5 1) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 101 '((0 0) (1 1) (2 #xa) (3 #x47) (4 #x63) (5 1) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 102 '((0 0) (1 1) (2 #xa) (3 #x47) (4 #x63) (5 0) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 103 '((0 0) (1 1) (2 #xa) (3 #x47) (4 #x63) (5 0) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 104 '((0 0) (1 1) (2 #xa) (3 #x47) (4 #x63) (5 0) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 105 '((0 0) (1 1) (2 #xa) (3 #x47) (4 #x63) (5 0) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 106 '((0 0) (1 1) (2 #xa) (3 #x47) (4 #x63) (5 0) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 107 '((0 0) (1 1) (2 #xa) (3 #x47) (4 #x63) (5 0) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 108 '((0 0) (1 1) (2 #xb) (3 #x47) (4 #x63) (5 0) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 109 '((0 0) (1 1) (2 #xb) (3 #x47) (4 #x63) (5 1) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 110 '((0 0) (1 1) (2 #xb) (3 #x47) (4 #x63) (5 1) (6 #x28) (7 0)))
+(test-bubble-sort-at-cycle 111 '((0 0) (1 1) (2 #xb) (3 #x47) (4 #x63) (5 1) (6 #x2c) (7 0)))
+(test-bubble-sort-at-cycle 112 '((0 0) (1 1) (2 #xb) (3 #x47) (4 #x63) (5 1) (6 #x2c) (7 0)))
+(test-bubble-sort-at-cycle 113 '((0 0) (1 1) (2 #xb) (3 #x1) (4 #x63) (5 1) (6 #x2c) (7 0)))
+(test-bubble-sort-at-cycle 114 '((0 0) (1 1) (2 #xb) (3 #x1) (4 #x63) (5 0) (6 #x2c) (7 0)))
+(test-bubble-sort-at-cycle 115 '((0 0) (1 1) (2 #xb) (3 #x1) (4 #x63) (5 0) (6 #x2c) (7 0)))
+(test-bubble-sort-at-cycle 116 '((0 0) (1 1) (2 #xb) (3 #x1) (4 #x63) (5 0) (6 #x2c) (7 0)))
+(test-bubble-sort-at-cycle 117 '((0 0) (1 1) (2 #xb) (3 #x1) (4 #x63) (5 0) (6 #x2c) (7 0)))
+(test-bubble-sort-at-cycle 118 '((0 0) (1 1) (2 #xb) (3 #x1) (4 #x63) (5 0) (6 #x2c) (7 0)))
+(test-bubble-sort-at-cycle 119 '((0 0) (1 1) (2 #xb) (3 #x1) (4 #x63) (5 0) (6 #x2c) (7 0)))
+(test-bubble-sort-at-cycle 120 '((0 0) (1 1) (2 #xc) (3 #x1) (4 #x63) (5 0) (6 #x2c) (7 0)))
+(test-bubble-sort-at-cycle 121 '((0 0) (1 1) (2 #xc) (3 #x1) (4 #x63) (5 0) (6 #x2c) (7 0)))
+
+(defun memcheck-at-cycle (prog n exp) '())
 
 
 
-
-
-
-
-;; (emu-test-reg
-;;  ;; not working.
-;;  '(;;;; design problem: bubble sort  
-;;    (br :step1)
-   
-;;    :A
-;;    (long 10) (long 56) (long 27) (long 69) (long 73) (long 99)
-;;    (long 44) (long 36) (long 10) (long 72) (long 71) (long 1)
-
-;;    (set swapped r1)
-;;    (set i r2)
-;;    (set cur r3)
-;;    (set prev r4)
-;;    (set tmp r5)
-;;    (set idx r6)
-   
-;;    ;; -------------------------------------------------------
-;;    :step1
-;;    (cmove 0 swapped)
-
-;;    ;; -------------------------------------------------------
-;;    :step2
-;;    (cmove 0 i)
-
-;;    ;; -------------------------------------------------------
-;;    :step3
-;;    (addc i 1 i)
-;;    (cmpltc i 12 tmp)
-;;    (bf tmp :step5)
-   
-;;    ;; -------------------------------------------------------
-;;    :step4
-;;    (mulc i 4 idx)
-;;    (ld idx (- a 4) prev)
-;;    (ld idx a cur)
-;;    (cmple prev cur tmp)
-;;    (bt tmp :step3)
-
-;;    (st prev a idx)
-;;    (st cur (- a 4) idx)
-
-;;    (cmove 1 swapped)
-;;    (br :step3)
-   
-;;    ;; -------------------------------------------------------
-;;    :step5
-;;    (bt swapped :step1)
-
-;;    (halt)
-;;    ;; end bubble sort
-;;    )
-;;  10 2 1)
-
-
- 
-  
