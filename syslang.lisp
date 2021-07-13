@@ -1,333 +1,245 @@
-;; ;;;; closforth.lisp
+;; a simple systems language for the beta.
+(in-package #:regmach4wasm)
+(declaim (optimize (debug 3))) 
 
-;; (in-package #:closforth)
+;; https://stackoverflow.com/questions/211717
+(defun make-keyword (name) (values (intern name "KEYWORD")))
+(defun small-integer? (n) (and (>= n -32768) (<= n 32767)))
 
-;; (defgeneric eval-type (type-env expr) ())
+;; need to maintain scopes in the environment? maybe not.
+(defun sys-label (n &optional name) (make-keyword
+                           (if name
+                               (format nil "L~a_~a" name n)
+                               (format nil "L~a" n))))
 
-;; ;; (eval-type)
-;; ;; (type-env)
+;; generate labels from a nonce.
+(defun sys-gen-label (env &optional name)
+  (let ((n (env-get env 'label-nonce)))
+    (env-put env 'label-nonce (+ n 1))
+    (sys-label n name)))
 
-;; '(add 1 2 (mul 3 4 5))
+(defun eval-sys-var-decl (env expr)
+  (check-type env environment)
+  ;; initialize a variable without value
+  ;; TODO handle the case where there is an initial value.
+  (let* ((varname (caddr expr))
+         (label (sys-gen-label env varname))
+         (instructions `((pre (,label '(LONG 0)))))
+         (register nil))
+    (env-put env varname label)
+    (cons register instructions)))
 
-;; (defun decl-struct-name (expr) (cadr expr))
-;; (defun decl-struct-fields (expr) (caddr expr))
-;; (defun field-type (field) (car field))
-;; (defun field-name (field) (cadr field))
+(defun eval-sys-var-expr (env expr)
+  (check-type env environment)
+  (check-type expr symbol)
+  )
 
-;; (field-name (car (decl-struct-fields
-;;                   '(decl-struct stat ((short type)
-;;                                       (int dev)
-;;                                       (uint ino)
-;;                                       (short nlink)
-;;                                       (uint size))))))
+(defun eval-sys-constant (env n) (check-type env environment) (check-type n integer)
+  (let ((register (sys-next-free-reg env)))
+    (if (small-integer? n) ;; if small integer then move n into a ;; register
+        (cons register `((cmove ,n ,register)))
+        ;; otherwise, use LD instruction
+        (let* ((label (sys-gen-label env))          
+               (instructions`((ld ,label ,register)
+                              (static ,label)
+                              (long ,n))))
+          (cons register instructions)))))
 
-;; (struct-alloc name type)
+(defun make-sys-env ()
+  (let ((env (make-environment)))
+    (env-put env 'label-nonce 0)
+    (env-put env 'cur-reg 0)
+    env))
+
+(defparameter *register-limit* 26)
+
+(defun sys-get-cur-reg (env) (env-get env 'cur-reg))
+
+(defun sys-inc-cur-reg (env)
+  (let ((cur-reg (sys-get-cur-reg env)))
+    (if (< cur-reg *register-limit*)
+        (env-put env 'cur-reg (+ cur-reg 1))
+        (break "ran out of registers, haven't implemented spilling yet."))))
+
+(defun sys-next-free-reg (env)
+  (let ((cur-reg (sys-get-cur-reg env)))
+    (if (< cur-reg *register-limit*)
+        (progn (sys-inc-cur-reg env)
+               cur-reg;;(make-symbol (format nil "R~a" cur-reg))
+               )
+        (break "ran out of registers, haven't implemented spilling yet."))))
+
+(defun eval-sys-symbol (env expr)
+  ;; look up the symbol
+  (let ((label (env-get env expr))
+        (reg (sys-next-free-reg env)))
+    (env-put env expr label) ;; keep track of which expr is in which reg. this is just a hunch.
+    (cons reg `((LD ,label ,reg)))))
+
+(defun eval-sys-set (env expr)
+  ;; find the declaration in the environment.
+  ;; (set varname expr)
+  (let* ((varname (cadr expr))
+         (rhs (caddr expr))
+         (reg (sys-next-free-reg env))
+         (label (env-get env varname)))
+    (if (and label (numberp rhs))
+        (cons reg `((CMOVE ,rhs ,reg)
+                    (ST ,reg ,label)))
+        (let ((r (eval-sys env rhs)))
+          (cons (result-reg r)
+                (append (result-insts r)
+                        `((ST ,(result-reg r) ,label))))))))
+
+(defun eval-sys-add (env expr)
+  (when (> (length expr) 3) (break "Can't add move than two values at a time TODO fix this"))
+  (let* ((r1 (eval-sys env (cadr expr)))
+         (r2 (eval-sys env (caddr expr))))
+    (cons (result-reg r1)
+          (concat `(,(result-insts r1)
+                    ,(result-insts r2)
+                    ((ADD ,(result-reg r1) ,(result-reg r2) ,(result-reg r1))))))))
+
+;; this actually works.
+;; (bsim-fmt-some-instructions (sys-compile
+;;                              '((var int x 0)
+;;                                (var int y 0)
+;;                                (var int z 0)
+                               
+;;                                (set x 2)
+;;                                (set y 3)
+;;                                (set z (+ x y)) 
+;;                                )))
 
 
-;; (defun eval-struct-decl (expr))
-;; (defun typedef-name (expr) (cadr expr))
-;; (defun typedef-type (expr) (caddr expr))
-;; (defun eval-typedef (expr))
+;; (defun calling-sequence (args f)
+;;   ;; entry sequence
+;;   :f
+;;   (push lp) (push bp) (move sp bp)
+;;   (allocate nlocals)
+;;   (push used-regs)
+;;   ;; exit sequence
+;;   (move bp sp)
+;;   (pop bp)
+;;   (pop lp)
+;;   (jmp lp)
+;;   )
+;; ;; calling sequence
+;; (concat (map (lambda (arg) `(push ,arg)) args))
+;; (BR f LP)
+;; (deallocate (length args))
 
-;; '( :heap (reserve 1000) )
-
-
-;; '(;;
-;;   (DIVC RA literal RC)
-;;   (JMP RA RC)
-;;   :kernel-write-msg
-;;   ;;
+;; (defun call (f &rest args)
+;;   ;; calling sequence
+;;   (concat (map (lambda (arg) `(push ,arg)) args))
+;;   (BR f LP)
+;;   (deallocate (length args))
 ;;   )
 
+;; (when (code) (block))
+(defun eval-sys-when-stmt (env expr)
+  (let* ((conditional (cadr expr))
+         (when-block (cddr expr))
+         (conditional-result (eval-sys env conditional))
+         (statement-result (eval-sys-some env when-block))
+         (end-when-label (sys-gen-label env "endwhen"))
+         (register (result-reg statement-result))
+         (instructions (concat `(,(result-insts conditional-result)
+                                 ((BF ,(result-reg conditional-result) ,end-when-label))
+                                 ,(result-insts statement-result)
+                                 (,end-when-label)))))
+    (cons register instructions)
+    ))
+
+(bsim-fmt-some-instructions
+ (eval-sys-when-stmt (make-sys-env) '(when 1 (+ 1 2));;
+                     ;;(when 0 (+ 2 3))
+                     ))
+
+
+
+;
+; LX_0: LONG(0)
+;; LY_1: LONG(0)
+;; LZ_2: LONG(0)
+;; CMOVE (2, 0)
+;; ST(0, LX_0)
+;; CMOVE(3, 1)
+;; ST(1, LY_1)
+;; LD(LX_0, 3)
+;; LD(LY_1, 4)
+;; ADD(3, 4, 3)
+
+;; (test-assemble-beta
+;;  (sys-compile '((var int x)
+;;                 (var int y)
+;;                 (var int z)
+;;                 (set x 2)
+;;                 (set y 3)
+;;                 (set z (+ x y))))
+;; )
+
+(defun result-reg (result) (car result))
+(defun result-insts (result) (cdr result))
+
+(defun eval-sys-some (env code-block)
+  (let ((register nil)
+        (instructions (cons nil (apply #'concatenate 'list
+                                       (mapcar (lambda (expr)
+                                                 (result-insts (eval-sys env expr)))
+                                               code-block)))))
+    (cons register instructions)))
+
+(defun eval-sys (env expr)
+  (print expr)
+  (check-type env environment)
+  (format t "eval-sys-sys: ~a ~%" expr)
+  (cond ((numberp expr) (eval-sys-constant env expr))
+        ((symbolp expr) (eval-sys-symbol env expr))        
+        ((listp expr) (case (car expr)
+                        (var (eval-sys-var-decl env expr))                        
+                        (set (eval-sys-set env expr))
+                        (when (eval-sys-when-stmt env expr))
+                        ;; (func (eval-sys-func env expr))
+                        ;; (break (break)) ;; how to add break to an interpreter. 
+                        (+ (eval-sys-add env expr))
+                        ;; (- (eval-sys-op vm env #'- expr))
+                        ;; (* (eval-sys-op vm env #'* expr))
+                        ;; (/ (eval-sys-op vm env #'/ expr))
+                        ;; (<= (eval-sys-op vm env #'<= expr))
+                        ;; (bitwise-or (eval-sys-op vm env #'logior expr))
+                        ;; (bitwise-and (eval-sys-op vm env #'logand expr))
+                        ;; (mod (eval-sys-op vm env #'mod expr))
+                        ;; (inc-pc (eval-sys-inc-pc vm env))
+                        ;; (set-pc (eval-sys-set-pc vm env expr))
+                        ;; (set-var (eval-sys-set-var vm env expr))
+                        ;; (set-reg (eval-sys-set-reg vm env expr))
+                        ;; (set-mem (eval-sys-set-mem vm env expr))
+                        ;; (mem (eval-sys-get-mem vm env expr))
+                        ;; (not (eval-sys-not vm env expr))
+                        ;; (reg (eval-sys-get-reg vm expr))
+                        ;; (sign-extend (eval-sys-sign-extend vm env expr))
+                        ;; (if (eval-sys-if vm env expr))
+                        ;; (eq (eval-sys-eq vm env expr))
+                        (otherwise (error (format nil "unhandled case in eval-sys: ~a" expr)))))
+        ;; ((eq 'nop expr) 0) ;; is nil the right thing to return here?
+        ;; ((symbolp expr) (env-get env expr))
+        (t (error (format nil "unhandled case in eval-sys-mc: ~a" expr)))))
+
+
+(eval-sys (make-sys-env) '(var int x))
+
+(defun sys-compile (prog)
+  (apply #'concatenate 'list (let ((env (make-sys-env)))
+                               (mapcar (lambda (expr) (result-insts (eval-sys env expr))) prog))))
+
+
+(test-assemble-beta (sys-compile '((var int x)
+                                   (set x 4)))
+                    (hexs :00000000 :c01f0004 :641f0000))
 
-;; '(
-;;   ;; in forth dot (.) pops and shows.  Lisp doesn't like reusing dot, so
-;;   ;; how about $ for now.
-  
-;;   ;; build a language that can emit beta assembly.
+(test-assemble-beta (sys-compile '((var int asdf)
+                                   (set asdf 4)))
+                    (hexs :00000000 :c01f0004 :641f0000))
 
-;;   (typedef uint unsigned-int)
-;;   (typedef ushort unsigned-short)
-;;   (typedef uchar unsigned-char)
-;;   (typedef pde_t uint)
-;;   (typedef Align long)
-
-;;   ;; struct stat {
-;;   ;;   short type;
-;;   ;;   int dev;
-;;   ;;   uint ino;
-;;   ;;   short nlink;
-;;   ;;   uint size;
-;;   ;; };
-
-
-;;   (decl-struct stat ((short type)
-;;                      (int dev)
-;;                      (uint ino)
-;;                      (short nlink)
-;;                      (uint size)))
-
-  
-
-
-;;   ;; struct stat;
-
-;;   (struct stat)
-
-;;   ;; union header {
-;;   ;;   struct {
-;;   ;;     union header *ptr;
-;;   ;;     uint size;
-;;   ;;   } s;
-;;   ;;   Align x;
-;;   ;; };
-
-;;   ;; typedef union header Header;
-
-;;   ;; static Header base;
-;;   ;; static Header *freep;
-;;   (static header base)
-;;   (static (header ptr) freep)
-
-
-
-;;   ;; void
-;;   ;; free(void *ap)
-;;   ;; {
-;;   ;;   Header *bp, *p;
-
-;;   ;;   bp = (Header*)ap - 1;
-;;   ;;   for(p = freep; !(bp > p && bp < p->s.ptr); p = p->s.ptr)
-;;   ;;     if(p >= p->s.ptr && (bp > p || bp < p->s.ptr))
-;;   ;;       break;
-;;   ;;   if(bp + bp->s.size == p->s.ptr){
-;;   ;;     bp->s.size += p->s.ptr->s.size;
-;;   ;;     bp->s.ptr = p->s.ptr->s.ptr;
-;;   ;;   } else
-;;   ;;     bp->s.ptr = p->s.ptr;
-;;   ;;   if(p + p->s.size == bp){
-;;   ;;     p->s.size += bp->s.size;
-;;   ;;     p->s.ptr = bp->s.ptr;
-;;   ;;   } else
-;;   ;;     p->s.ptr = bp;
-;;   ;;   freep = p;
-;;   ;; }
-
-
-
-
-
-
-;;   ;;       break;
-;;   ;;   if(bp + bp->s.size == p->s.ptr){
-;;   ;;     bp->s.size += p->s.ptr->s.size;
-;;   ;;     bp->s.ptr = p->s.ptr->s.ptr;
-;;   ;;   } else
-;;   ;;     bp->s.ptr = p->s.ptr;
-;;   ;;   if(p + p->s.size == bp){
-;;   ;;     p->s.size += bp->s.size;
-;;   ;;     p->s.ptr = bp->s.ptr;
-;;   ;;   } else
-;;   ;;     p->s.ptr = bp;
-;;   ;;   freep = p;
-;;   ;; }
-;;   (func free ((* void) ap) void
-;;    (var (* header) bp)
-;;    (var (* header) p)
-
-;;    (set bp (ptr- (coerce (ptr header) ap) 1))
-
-
-;;    ;; (while cond stmts)
-
-;;    (while (and (> bp p) (< bp (sel (-> p s) ptr)))
-;;     (when (and (>= p (sel (-> p s) ptr))
-;;                (or (> bp p)
-;;                    (< bp (sel (-> p s) ptr))))
-;;       (break))
-    
-;;     ;; for loop update clause.
-;;     (set p (sel (-> p s) ptr))
-;;     )
-
-
-
-
-;;    )
-
-
-
-
-
-
-
-
-;;   ;; static Header*
-;;   ;; morecore(uint nu)
-;;   ;; {
-;;   ;;   char *p;
-;;   ;;   Header *hp;
-
-;;   ;;   if(nu < 4096)
-;;   ;;     nu = 4096;
-;;   ;;   p = sbrk(nu * sizeof(Header));
-;;   ;;   if(p == (char*)-1)
-;;   ;;     return 0;
-;;   ;;   hp = (Header*)p;
-;;   ;;   hp->s.size = nu;
-;;   ;;   free((void*)(hp + 1));
-;;   ;;   return freep;
-;;   ;; }
-
-
-;;   ;; (func name args return-type stmts)
-
-;;   (func morecore ((uint nu)) (static (ptr header))
-;;    ;;
-;;    (var (ptr char) p)
-;;    (var (ptr header) hp)
-
-;;    (when (< nu 4096)
-;;      (set nu 4096))
-
-;;    (set p (sbrk (* nu (sizeof header))))
-
-;;    ;; (when cond stmts)
-;;    (when (eq p (coerce -1 (ptr char)))
-;;      (return 0))
-   
-;;    (set hp (coerce p (ptr header)))
-;;    (set (sel (-> hp s) size) nu)
-;;    (free (ptr+ hp 1))
-   
-;;    (return freep))
-
-
-
-
-  
-
-
-
-;;   ;; void*
-;;   ;; malloc(uint nbytes)
-;;   ;; {
-;;   ;;   Header *p, *prevp;
-;;   ;;   uint nunits;
-
-;;   ;;   nunits = (nbytes + sizeof(Header) - 1)/sizeof(Header) + 1;
-;;   ;;   if((prevp = freep) == 0){
-;;   ;;     base.s.ptr = freep = prevp = &base;
-;;   ;;     base.s.size = 0;
-;;   ;;   }
-;;   ;;   for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr){
-;;   ;;     if(p->s.size >= nunits){
-;;   ;;       if(p->s.size == nunits)
-;;   ;;         prevp->s.ptr = p->s.ptr;
-;;   ;;       else {
-;;   ;;         p->s.size -= nunits;
-;;   ;;         p += p->s.size;
-;;   ;;         p->s.size = nunits;
-;;   ;;       }
-;;   ;;       freep = prevp;
-;;   ;;       return (void*)(p + 1);
-;;   ;;     }
-;;   ;;     if(p == freep)
-;;   ;;       if((p = morecore(nunits)) == 0)
-;;   ;;         return 0;
-;;   ;;   }
-;;   ;; }
-
-;;   '((func malloc (((uint32 nbytes)) void*)      
-;;      (var (ptr header) p)
-;;      (var (ptr header) prevp)
-;;      (var uint nunits)
-     
-;;      ;; nunits = (nbytes + sizeof(Header) - 1)/sizeof(Header) + 1;
-;;      (set nunits (+ 1 (/ (- (+ nbytes (sizeof header)) 1)
-;;                        (sizeof header))))
-
-;;      (set p (sel (-> prevp s) ptr)) ;; p = prevp->s.ptr;
-
-;;      (set prevp freep)
-;;      (if (nullptr? prevp)
-;;          (progn
-;;            (set (prevp (& base)))
-;;            (set (freep (& base)))            
-;;            (set (sel base s ptr) (& base))))
-     
-     
-;;      ;;   for(p = prevp->s.ptr; ; prevp = p, p = p->s.ptr){
-;;      (forever
-;;       ;;     if(p->s.size >= nunits){
-;;       (if (>= (p-> (sel s size) nunits))
-;;           (set (prevp-> (sel s ptr)) (sel (-> p s) ptr))
-;;           (progn
-;;             ;; p->s.size -= nunits;
-;;             ;; p += p->s.size;
-;;             ;; p->s.size = nunits;
-;;             (set p (- p (sel (-> p s) size) nunits))
-;;             (set p (+ p (sel (-> p s) size)))
-;;             (set (sel (-> p s) size) nunits))
-;;           ;; freep = prevp;
-;;           ;; return (void*)(p + 1);
-;;           ;; }
-;;           ;;     if(p == freep)
-;;           ;;       if((p = morecore(nunits)) == 0)
-;;           ;;         return 0;
-;;           ;;   }
-
-;;           (if (eq p freep)
-;;               (set p (morecore nunits))
-;;               (when (zero? p) (return 0))))
-
-;;       ;; END OF FOR LOOP:  prevp = p, p = p->s.ptr
-;;       (set prevp p)
-;;       (set p (p-> (member s ptr)))
-
-      
-;;       )))
-
-
-
-
-;;   ;; int fork(void);
-;;   ;; int exit(void) __attribute__((noreturn));
-;;   ;; int wait(void);
-;;   ;; int pipe(int*);
-;;   ;; int write(int, void*, int);
-;;   ;; int read(int, void*, int);
-;;   ;; int close(int);
-;;   ;; int kill(int);
-;;   ;; int exec(char*, char**);
-;;   ;; int open(char*, int);
-;;   ;; int mknod(char*, short, short);
-;;   ;; int unlink(char*);
-;;   ;; int fstat(int fd, struct stat*);
-;;   ;; int link(char*, char*);
-;;   ;; int mkdir(char*);
-;;   ;; int chdir(char*);
-;;   ;; int dup(int);
-;;   ;; int getpid(void);
-;;   ;; char* sbrk(int);
-;;   ;; int sleep(int);
-;;   ;; int uptime(void);
-
-
-;;   ;; int stat(char*, struct stat*);
-;;   ;; char* strcpy(char*, char*);
-;;   ;; void *memmove(void*, void*, int);
-;;   ;; char* strchr(const char*, char c);
-;;   ;; int strcmp(const char*, const char*);
-;;   ;; void printf(int, char*, ...);
-;;   ;; char* gets(char*, int max);
-;;   ;; uint strlen(char*);
-;;   ;; void* memset(void*, int, uint);
-;;   ;; void* malloc(uint);
-;;   ;; void free(void*);
-;;   ;; int atoi(const char*);
-;;   ;; # 4 "umalloc.c" 2
-;;   ;; # 1 "param.h" 1
-;;   ;; # 5 "umalloc.c" 2
-;;   )
 
