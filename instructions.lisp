@@ -316,3 +316,18 @@
         ;; else this is a positive number.
         n)))
 
+(defun bsim-fmt-instruction (inst)
+  (cond ((numberp inst) (format nil "~a" inst))
+        ((symbolp inst) (format nil "~a" inst))        
+        ((listp inst) (case (length inst)
+                        (2 (format nil "~a(~a)" (car inst) (cadr inst)))
+                        (3 (format nil "~a(~a, ~a)" (car inst) (cadr inst) (caddr inst)))
+                        (4 (format nil "~a(~a, ~a, ~a)"
+                                   (car inst) (cadr inst) (caddr inst) (cadddr inst)))))))
+
+
+(defun bsim-fmt-some-instructions (instructions)
+  (let ((instruction-strings (mapcar #'bsim-fmt-instruction instructions)))    
+    (apply #'concatenate 'string (cons (car instruction-strings)
+                                       (mapcar (lambda (x) (format nil "~%~a" x))
+                                               (cdr instruction-strings))))))
