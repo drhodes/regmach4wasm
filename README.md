@@ -3,7 +3,10 @@
 Here is the microcode language, it emulates datapath level
 operations. It's a small language that supports a limited set of
 commands that mutate the state of a virtual BETA cpu with ram.
+<<<<<<< HEAD
 =======
+=======
+>>>>>>> c787d65... updates readme
 
 ```lisp
 (add-instruction '(ADD RA RB RC) 'OP #b100000                 
