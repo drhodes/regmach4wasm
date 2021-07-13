@@ -51,4 +51,14 @@
       (list)
       (cons (car xs) (take (- n 1) (cdr xs)))))
 
+(defun concat (xs)
+  (apply #'concatenate 'list xs))
+
 (defun unimplemented () (error "unimplemented"))
+
+(defun interleave (xs c)
+  (cond ((null xs) '())
+        ((= 1 (length xs)) xs)
+        ((append (list (car xs) c) (interleave (cdr xs) c)))))
+
+
