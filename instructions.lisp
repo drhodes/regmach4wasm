@@ -162,17 +162,18 @@
                   RC"
                  
                  '((inc-pc)
-                   (if (<= (reg ra) (reg rb))
+                   (if (< (reg ra) (reg rb))
                        (set-reg rc 1)
                        (set-reg rc 0))))
 
+;; (defmacro CMPLTC (RA C RC)    (betaopc #x35 RA C RC))
 (add-instruction '(CMPLTC RA literal RC) 'OPC #b110101
                  "If the contents of register RA are less than literal
                   then the value one is written to register RC
                   otherwise zero is written to RC"
 
                  '((inc-pc)
-                   (if (<= (reg ra) (sign-extend literal))
+                   (if (< (reg ra) (sign-extend literal))
                        (set-reg rc 1)
                        (set-reg rc 0))))
 
