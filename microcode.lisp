@@ -71,7 +71,7 @@
           (mcvm-ram-get vm (+ pc 3)))))
 
 (defun mcvm-set-reg (mcvm reg val)
-  (check-type reg number)
+  ;; (check-type reg number)
   (regfile-set-reg (mcvm-regfile mcvm) reg val))
 
 (defun mcvm-get-reg (mcvm reg)
@@ -165,7 +165,7 @@
             (bind-vars env microcode))))
 
 (defun eval-get-reg (vm expr)
-  (if (= expr 31) 0
+  (if (eq expr '(reg 31)) 0
       (mcvm-get-reg vm (cadr expr))))
 
 (defun eval-sign-extend (vm env expr)
@@ -200,6 +200,7 @@
                         (* (eval-op vm env #'* expr))
                         (/ (eval-op vm env #'/ expr))
                         (<= (eval-op vm env #'<= expr))
+                        (< (eval-op vm env #'< expr))
                         (bitwise-or (eval-op vm env #'logior expr))
                         (bitwise-and (eval-op vm env #'logand expr))
                         (mod (eval-op vm env #'mod expr))
