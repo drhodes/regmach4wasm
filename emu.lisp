@@ -382,5 +382,62 @@ a time."
 
 (defun memcheck-at-cycle (prog n exp) '())
 
+;; multiplication
+
+(emu-test-reg '(;(option clk)
+                (cmove 2 r0)
+                (mul r0 r0 r0))
+              2 0 4)
+
+;; factorial works!
+(emu-test-reg
+ '((cmove stack sp)
+   (br start)
+   
+   ;; ------------------------------------------------------------------
+   :fact                                ; factorial
+   
+   ;; prologue
+   (push lp)                            ; save linkage
+   (push bp)                            ; save base
+   (move sp bp)                         ; update 
+   (push r1)                            ; remember caller's r1
+   (ld bp -12 r1)                       ; r1 <- n
+
+   ;; body
+   (cmplec r1 0 r0)                     ; r0 <- n <= 0 ?
+   (bt r0 else)                         ; if n<=0 goto else
+   
+   (subc r1 1 r1)                       ; otherwise, r -= 1
+   (push r1)                            ; prepare arg to fact
+   (br fact lp)                         ; fact(n-1)
+   
+   ;; this is where the recursion starts unwinding
+   (deallocate 1)                       ; remove r1
+   (ld bp -12 r1)                       ; r1 <- fact(n-1)
+   (mul r1 r0 r0)                       ; r0 <- n * fact(n-1)
+   (br rtn)                             ; goto rtn
+
+   :else                                ; base case
+   (cmove 1 r0)                         ; return 1
+
+   :rtn                                 ; epilogue
+   (pop r1)                             ; restore caller's r1
+   (move bp sp)                         ; restore caller's stack
+   (pop bp)                             ; restore caller's base pointer
+   (pop lp)                             ; 
+   (jmp lp)
+
+   ;; ------------------------------------------------------------------
+   :start
+   (cmove 4 r0)                         ; prepare fact(4)
+   (push r0)                            ; push 4 onto arg stack
+   (call fact)                          ; go!
+   (halt)
+
+   :stack
+   (reserve 100))                       ; 
+ 129 0 24)
+
 
 
