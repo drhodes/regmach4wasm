@@ -43,6 +43,17 @@
                  '((inc-pc)
                    (set-reg rc (+ (reg ra) (reg rb)))))
 
+(add-instruction '(SUB RA RB RC) 'OP #b100001
+                 "The contents of register Rb are subtracted from the
+                  contents of register Ra and the 32-bit difference is written to
+                  Rc. This instruction computes no borrow or overflow information. If
+                  desired, this can be computed through explicit compare instructions."
+                 '((inc-pc)
+                   (set-reg rc (- (reg ra) (reg rb)))))
+
+
+
+
 (add-instruction '(ADDC RA literal RC) 'OPC #b110000
                  "The contents of register Ra are added to literal and
                   the 32-bit sum is written to Rc. This instruction
@@ -52,6 +63,17 @@
 
                  '((inc-pc)
                    (set-reg rc (+ (reg ra) (sign-extend literal)))))
+
+
+(add-instruction '(SUBC RA literal RC) 'OPC #b110001
+                 "The constant literal is subtracted from the contents
+                  of register Ra and the 32-bit difference is written
+                  to Rc. This instruction computes no borrow or
+                  overflow information. If desired, this can be
+                  computed through explicit compare instructions."
+
+                 '((inc-pc)
+                   (set-reg rc (- (reg ra) (sign-extend literal)))))
 
 (add-instruction '(AND RA RB RC) 'OP #b101000
                  "This performs the bitwise boolean AND function
