@@ -46,10 +46,11 @@ bytes in indexed from low to high, and an instruction object."
 (defun emu-execute-one-instruction (emu byte-list)
   (when (equal '(0 0 0 0) byte-list) (break "HALT instruction encountered"))
   (let* ((opcode (select-bits byte-list 31 26))
-         (instruction (print (get-instruction opcode))))    
+         (instruction (get-instruction opcode)))    
     (case (instruction-layout instruction)
       (OP (emu-execute-op emu byte-list instruction))
       (OPC (emu-execute-opc emu byte-list instruction))
+      (OP-JMP (emu-execute-opc emu byte-list instruction))
       (otherwise (error "unknown opcode layout encountered")))))
 
 (defun emu-step (emu)
