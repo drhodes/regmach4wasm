@@ -77,7 +77,7 @@
 (defun mcvm-get-reg (mcvm reg)
   (if (= reg 31) 0
       (let ((val (regfile-get-reg (mcvm-regfile mcvm) reg)))
-        (format t "mcvm-get-reg: ~a: ~a ~%" reg val)
+        ;;(format t "mcvm-get-reg: ~a: ~a ~%" reg val)
         val)))
 
 ;; -----------------------------------------------------------------------------
@@ -191,7 +191,7 @@
 (defun eval-mc (vm env expr)
   (check-type env environment)
   (check-type vm mcvm)
-  (format t "eval-mc: ~a ~%" expr)
+  ;; (format t "eval-mc: ~a ~%" expr)
   (cond ((numberp expr) expr) 
         ((listp expr) (case (car expr)
                         (break (break)) ;; how to add break to an interpreter. 
