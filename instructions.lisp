@@ -228,7 +228,7 @@
                   6.3 for details"
 
                  '((inc-pc)
-                   (set-var effective-address (and (reg ra) #xFFFFFFFC))
+                   (set-var effective-address (bitwise-and (reg ra) #xFFFFFFFC))
                    (set-reg rc pc)
                    (set-pc effective-address)))
 
