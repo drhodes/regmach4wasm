@@ -151,15 +151,12 @@
     (cons register instructions)
     ))
 
-(bsim-fmt-some-instructions
- (eval-sys-when-stmt (make-sys-env) '(when 1 (+ 1 2));;
-                     ;;(when 0 (+ 2 3))
-                     ))
+;; (bsim-fmt-some-instructions
+;;  (eval-sys-when-stmt (make-sys-env) '(when 1 (+ 1 2));;
+;;                      ;;(when 0 (+ 2 3))
+;;                                         ;                      ))
 
-
-
-;
-; LX_0: LONG(0)
+;; LX_0: LONG(0)
 ;; LY_1: LONG(0)
 ;; LZ_2: LONG(0)
 ;; CMOVE (2, 0)
@@ -170,14 +167,29 @@
 ;; LD(LY_1, 4)
 ;; ADD(3, 4, 3)
 
-;; (test-assemble-beta
-;;  (sys-compile '((var int x)
-;;                 (var int y)
-;;                 (var int z)
-;;                 (set x 2)
-;;                 (set y 3)
-;;                 (set z (+ x y))))
-;; )
+;; (sys-compile '((var int x)
+;;                (var int y)
+;;                (var int z)
+;;                (set x 2)
+;;                (set y 3)
+;;                (set z (+ x y))))
+
+(defun eval-sys-ifthen-stmt (env expr)
+  (when (not (= (length expr) 4))
+    (error "if then statements lists must have 4 elements"))
+  (let ((conditional-results (eval-sys env (cadr expr)))
+        (else-label (sys-gen-label env "else"))
+        (end-if-label (sys-gen-label env "endif"))
+        (then-block-results (eval-sys env (caddr expr)))
+        (else-block-results (eval-sys env (cadddr expr))))
+    (concat (list (result-insts conditional-results)
+                  `((BF ,(result-reg conditional-results) ,else-label))
+                  (result-insts then-block-results)
+                  `((BR ,end-if-label))
+                  (list else-label)
+                  (result-insts else-block-results)
+                  (list end-if-label)))))
+
 
 (defun result-reg (result) (car result))
 (defun result-insts (result) (cdr result))
@@ -190,6 +202,9 @@
                                                code-block)))))
     (cons register instructions)))
 
+
+'(func double (x) (* x x))
+
 (defun eval-sys (env expr)
   (print expr)
   (check-type env environment)
@@ -200,6 +215,8 @@
                         (var (eval-sys-var-decl env expr))                        
                         (set (eval-sys-set env expr))
                         (when (eval-sys-when-stmt env expr))
+                        (if (eval-sys-ifthen-stmt env expr))
+                        (progn (eval-sys-some env expr))
                         ;; (func (eval-sys-func env expr))
                         ;; (break (break)) ;; how to add break to an interpreter. 
                         (+ (eval-sys-add env expr))
@@ -226,20 +243,23 @@
         ;; ((symbolp expr) (env-get env expr))
         (t (error (format nil "unhandled case in eval-sys-mc: ~a" expr)))))
 
-
-(eval-sys (make-sys-env) '(var int x))
-
 (defun sys-compile (prog)
   (apply #'concatenate 'list (let ((env (make-sys-env)))
                                (mapcar (lambda (expr) (result-insts (eval-sys env expr))) prog))))
 
 
-(test-assemble-beta (sys-compile '((var int x)
-                                   (set x 4)))
-                    (hexs :00000000 :c01f0004 :641f0000))
+(bsim-fmt-some-instructions
+ (sys-compile '((var int x)
+                (set x 1)
+                (if x (set x 2) (set x 1)))))
 
-(test-assemble-beta (sys-compile '((var int asdf)
-                                   (set asdf 4)))
-                    (hexs :00000000 :c01f0004 :641f0000))
+
+;; (test-assemble-beta (sys-compile '((var int x)
+;;                                    (set x 4)))
+;;                     (hexs :00000000 :c01f0004 :641f0000))
+
+;; (test-assemble-beta (sys-compile '((var int asdf)
+;;                                    (set asdf 4)))
+;;                     (hexs :00000000 :c01f0004 :641f0000))
 
 
