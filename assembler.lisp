@@ -601,4 +601,42 @@
           :c8c20004 :60860000 :60660004 :98a41800 :77e5fff8 :64860004
           :64660000 :c03f0001 :73fffff4 :77e1fff1 :00000000))
 
+  (test-assemble-beta     
+   '( :fact
+     (push lp)
+     (push bp)
+     (move sp bp)
+     (push r1)
+     (ld bp -12 r1)
+     (cmplec r1 0 r0)
+     (bt r0 else)
+
+     (subc r1 1 r1)
+     (push r1)
+     (br fact lp)
+     (deallocate 1)
+     (ld bp -12 r1)
+     (mul r1 r0 r0)
+     (br rtn)
+
+     :else
+     (cmove 1 r0)
+
+     :rtn
+     (pop r1)
+     (move bp sp)
+     (pop bp)
+     (pop lp)
+     (jmp lp)
+
+     
+     )
+   
+   (hexs :c3bd0004 :679dfffc :c3bd0004 :677dfffc :837df800 :c3bd0004
+         :643dfffc :603bfff4 :d8010000 :77e00008 :c4210001 :c3bd0004
+         :643dfffc :739ffff2 :c7bd0004 :603bfff4 :88010000 :73ff0001
+         :c01f0001 :603dfffc :c3bdfffc :83bbf800 :637dfffc :c3bdfffc
+         :639dfffc :c3bdfffc :6ffc0000))
+
+
   )
